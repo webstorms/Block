@@ -1,0 +1,13 @@
+# OSX
+.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.brainbox.egg-info
+
+# PyCharm
+.idea
+
+# Jupyter Notebook
+.ipynb_checkpoints
