@@ -43,23 +43,7 @@ def test_linear_layers():
     fast_spikes, fast_mem = fast_snn(pre_spikes)
     assert (van_spikes.long() ^ fast_spikes.long()).sum() == 0
 
-
-def test_conv_layers():
-    t_len = 500
-    n_in = 1
-    n_out = 100
-
-    van_snn = ConvLIFNeurons(n_in, n_out, 20, 1, deactivate_reset=True, single_spike=True)
-    fast_snn = ConvFastLIFNeurons(t_len, n_in, n_out, 20, 1)
-    fast_snn.pre_spikes_to_current.weight = nn.Parameter(van_snn.pre_spikes_to_current.weight.unsqueeze(2))
-    fast_snn.pre_spikes_to_current.bias = van_snn.pre_spikes_to_current.bias
-
-    pre_spikes = torch.ones(1, n_in, t_len, 20, 20)
-    van_spikes, van_mem = van_snn(pre_spikes)
-    fast_spikes, fast_mem = fast_snn(pre_spikes)
-    assert (van_spikes.long() ^ fast_spikes.long()).sum() == 0
-
-
+    
 def test_models():
     t_len = 10
 

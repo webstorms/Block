@@ -92,20 +92,6 @@ class LinearLIFNeurons(VanillaBaseLIFNeurons):
         return self.pre_spikes_to_current(pre_spikes)
 
 
-class ConvLIFNeurons(VanillaBaseLIFNeurons):
-
-    def __init__(self, n_in, n_out, kernel_size, stride, beta_init=0.9, bias_init=0, surrogate_scale=100, deactivate_reset=False, single_spike=False):
-        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale, deactivate_reset, single_spike)
-        self.pre_spikes_to_current = nn.Conv2d(n_in, n_out, kernel_size, stride)
-
-        k_in = n_in * kernel_size * kernel_size
-        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/k_in), b=np.sqrt(1/k_in))
-        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
-
-    def input_to_current(self, pre_spikes):
-        return self.pre_spikes_to_current(pre_spikes)
-
-
 class LinearFastLIFNeurons(BaseLIFNeurons):
 
     def __init__(self, t_len, n_in, n_out, beta_init=0.9, bias_init=0, surrogate_scale=100):
@@ -148,66 +134,6 @@ class LinearFastLIFNeurons(BaseLIFNeurons):
     @staticmethod
     def g(s_sum):
         return F.relu(s_sum * (1 - s_sum) + 1) * s_sum
-
-
-class ConvFastLIFNeurons(BaseLIFNeurons):
-
-    def __init__(self, t_len, n_in, n_out, kernel_size, stride, beta_init=0.9, bias_init=0, surrogate_scale=100):
-        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale)
-        self._t_len = t_len
-
-        self.pre_spikes_to_current = nn.Conv3d(n_in, n_out, (1, kernel_size, kernel_size), stride)
-        k_in = n_in * kernel_size * kernel_size
-        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/k_in), b=np.sqrt(1/k_in))
-        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
-
-        self._betas_kernel = nn.Parameter(self._build_beta_kernel())
-        self._sum_kernel = nn.Parameter(self._build_sum_kernel())
-
-    @staticmethod
-    def g(s_sum):
-        return F.relu(s_sum * (1 - s_sum) + 1) * s_sum
-
-    @property
-    def hyperparams(self):
-        return {**super().hyperparams, 't_len': self._t_len}
-
-    def forward(self, pre_spikes):
-        # pre_spikes: n_batch x n_in x n_timesteps
-
-        # 1. Convert pre-synaptic spikes to input current
-        input_current = self.pre_spikes_to_current(pre_spikes)
-
-        # 2. Calculate membrane potential without reset
-        pad_input_current = F.pad(input_current, pad=(0, 0, 0, 0, self._t_len - 1, 0))
-        int_mem = F.conv3d(pad_input_current, self._betas_kernel)
-
-        # 3. Map no-reset membrane potentials to output spikes
-        int_spikes = self._spike_function(int_mem - 1)
-        pad_int_spikes = F.pad(int_spikes, pad=(0, 0, 0, 0, self._t_len - 1, 0))
-        sum_a = F.conv3d(pad_int_spikes, self._sum_kernel)
-        pad_sum_a = F.pad(sum_a, pad=(0, 0, 0, 0, self._t_len - 1, 0))
-        sum_b = F.conv3d(pad_sum_a, self._sum_kernel)
-        spikes = ConvFastLIFNeurons.g(sum_b)
-
-        return spikes, int_mem
-
-    def _build_beta_kernel(self):
-        betas = torch.Tensor([self._beta_init ** (self._t_len-i-1) for i in range(self._t_len)])
-        betas_kernel = torch.zeros(self._n_out, self._n_out, self._t_len, 1, 1)
-
-        for i in range(self._n_out):
-            betas_kernel[i, i, :, 0, 0] = betas
-
-        return betas_kernel
-
-    def _build_sum_kernel(self):
-        sum_kernel = torch.zeros(self._n_out, self._n_out, self._t_len, 1, 1)
-
-        for i in range(self._n_out):
-            sum_kernel[i, i, :] = 1
-
-        return sum_kernel
 
 
 class FastSigmoid(torch.autograd.Function):

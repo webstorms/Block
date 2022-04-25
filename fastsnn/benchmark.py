@@ -93,14 +93,3 @@ class LinearLayerBenchmarker(Benchmarker):
     def _get_fast_model(self, t_len, input_units, hidden_units):
         return layers.LinearFastLIFNeurons(t_len, input_units, hidden_units)
 
-
-class ConvLayerBenchmarker(Benchmarker):
-
-    def _get_name(self):
-        raise f"convlayer_{self._fast_layer}_{self._t_len}_{self._hidden_units}"
-
-    def _get_vanilla_model(self, input_units, hidden_units):
-        return layers.ConvLIFNeurons(1, hidden_units, kernel_size=4, stride=2)
-
-    def _get_fast_model(self, t_len, input_units, hidden_units):
-        return layers.ConvFastLIFNeurons(t_len, 1, hidden_units, kernel_size=4, stride=2)
