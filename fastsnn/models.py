@@ -5,62 +5,78 @@ from brainbox.models import BBModel
 from fastsnn.layers import LinearFastLIFNeurons, LinearLIFNeurons
 
 
-class LinearSNN(BBModel):
+class BaseModel(BBModel):
 
-    LAYER_FAST_REFAC = 0
-    LAYER_VAN_REFAC = 1
-    LAYER_VANILLA = 2
-
-    def __init__(self, layer_type, n_in, n_out, n_per_hidden, t_len, beta_init=0.9, beta_range=[0, 1], beta_diff=False, bias_init=0, bias_diff=True):
+    def __init__(self, t_len, n_in, n_out, n_hidden, n_layers, fast_layer=False, skip_connections=False, bias=0.5, hidden_beta=0.9, readout_beta=0.9, **kwargs):
         super().__init__()
-        self.layer_type = layer_type
-        self.n_per_hidden = n_per_hidden
-        self.beta_init = beta_init
-        self.beta_range = beta_range
-        self.beta_diff = beta_diff
-        self.bias_init = bias_init
-        self.bias_diff = bias_diff
+        self._t_len = t_len
+        self._n_in = n_in
+        self._n_out = n_out
+        self._n_hidden = n_hidden
+        self._n_layers = n_layers
+        self._fast_layer = fast_layer
+        self._skip_connections = skip_connections
+        self._bias = bias
+        self._hidden_beta = hidden_beta
+        self._readout_beta = readout_beta
 
         self._layers = nn.ModuleList()
 
-        # Instantiate hidden layers
-        for n_hidden in n_per_hidden:
-            if layer_type == LinearSNN.LAYER_FAST_REFAC:
-                layer = LinearFastLIFNeurons(n_in, n_hidden, t_len, beta_init, beta_range, beta_diff, bias_init, bias_diff)
+        # Build hidden layers
+        for i in range(n_layers):
+            n_in = n_in if i == 0 else n_hidden
+            self._layers.append(self._build_layer(n_in, n_hidden, bias, hidden_beta, **kwargs))
 
-            else:
-                layer = LinearLIFNeurons(n_in, n_hidden, beta_init, beta_range, beta_diff, bias_init, bias_diff, inf_refactory=(layer_type == LinearSNN.LAYER_VAN_REFAC))
-
-            self._layers.append(layer)
-            n_in = n_hidden
-        n_hidden = n_in
-
-        # Instantiate readout layer
-        if layer_type == LinearSNN.LAYER_FAST_REFAC:
-            self._readout_layer = LinearFastLIFNeurons(n_hidden, n_out, t_len, beta_init, beta_range, beta_diff, bias_init, bias_diff)
+        # Build readout layer
+        if fast_layer:
+            self._readout_layer = LinearFastLIFNeurons(t_len, n_hidden, n_out, readout_beta, bias)
         else:
-            self._readout_layer = LinearLIFNeurons(n_hidden, n_out, beta_init, beta_range, beta_diff, bias_init, bias_diff, deactivate_reset=True)
+            self._readout_layer = LinearLIFNeurons(n_hidden, n_out, readout_beta, bias, deactivate_reset=True)
 
     @property
     def hyperparams(self):
-        layers_hyperparams = [layer.hyperparams for layer in self._layers]
-        layers_hyperparams.extend([self._readout_layer.hyperparams])
-        return {**super().hyperparams, 'layer_type': self.layer_type, 'layers': layers_hyperparams}
+        return {**super().hyperparams, "t_len": self._t_len, "n_in": self._n_in, "n_out": self._n_out,
+                "n_hidden": self._n_hidden, "n_layers": self._n_layers, "fast_layer": self._fast_layer,
+                "skip_connections": self._skip_connections, "bias": self._bias, "hidden_beta": self._hidden_beta,
+                "readout_beta": self._readout_beta}
 
-    def forward(self, x, return_history=False):
+    def forward(self, spikes):
 
         spike_history = []
         mem_history = []
 
-        for layer in self._layers:
-            x, mem = layer(x)
+        for i, layer in enumerate(self._layers):
+            new_spikes, mem = layer(spikes)
 
-            if return_history:
-                spike_history.append(x)
-                mem_history.append(mem)
+            if self._skip_connections and i > 0:
+                spikes = torch.clamp(new_spikes + spikes, min=0, max=1)
+            else:
+                spikes = new_spikes
 
-        spikes, mem = self._readout_layer(x)
+            spike_history.append(spikes)
+            mem_history.append(mem)
+
+        spikes, mem = self._readout_layer(spikes)
+
         spike_history.append(spikes)
         mem_history.append(mem)
-        
-        return torch.max(mem, 2)[0] if not return_history else [spike_history, mem_history]
+
+        return torch.max(mem, 2)[0], spike_history, mem_history
+
+    def _build_layer(self, n_in, n_out, bias, beta, **kwargs):
+        pass
+
+
+class LinearModel(BaseModel):
+
+    def __init__(self, t_len, n_in, n_out, n_hidden, n_layers, fast_layer=False, skip_connections=False, bias=0.5, hidden_beta=0.9, readout_beta=0.9, **kwargs):
+        super().__init__(t_len, n_in, n_out, n_hidden, n_layers, fast_layer, skip_connections, bias, hidden_beta, readout_beta, **kwargs)
+
+    def _build_layer(self, n_in, n_out, bias, beta, **kwargs):
+        if self._fast_layer:
+            return LinearFastLIFNeurons(self._t_len, n_in, n_out, beta, bias)
+        else:
+            if kwargs.get("single_spike", False):
+                return LinearLIFNeurons(n_in, n_out, beta, bias, deactivate_reset=True, single_spike=True)
+            else:
+                return LinearLIFNeurons(n_in, n_out, beta, bias)

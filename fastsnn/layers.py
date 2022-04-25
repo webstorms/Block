@@ -7,43 +7,34 @@ from brainbox.models import BBModel
 
 class BaseLIFNeurons(BBModel):
 
-    def __init__(self, n_in, n_out, beta_init=0.9, beta_range=[0, 1], beta_diff=False, bias_init=0, bias_diff=True, surrogate_scale=100):
+    def __init__(self, n_in, n_out, beta_init=0.9, bias_init=0, surrogate_scale=100):
         super(BaseLIFNeurons, self).__init__()
         self._n_in = n_in
         self._n_out = n_out
         self._beta_init = beta_init
-        self._beta_range = beta_range
-        self._beta_diff = beta_diff
         self._bias_init = bias_init
-        self._bias_diff = bias_diff
         self._surrogate_scale = surrogate_scale
 
         self._spike_function = FastSigmoid.get(surrogate_scale)
-        self._betas = nn.Parameter(
+        self.beta = nn.Parameter(
             data=torch.Tensor([beta_init]),
-            requires_grad=beta_diff)
-
-    @property
-    def beta(self):
-        return torch.clamp(self._betas, min=self._beta_range[0], max=self._beta_range[1])
+            requires_grad=False)
 
     @property
     def hyperparams(self):
-        return {**super().hyperparams, 'n_in': self._n_in, 'n_out': self._n_out, 'beta_range': self._beta_range,
-                'beta_diff': self._beta_diff, 'bias_diff': self._bias_diff, 'surrogate_scale': self._surrogate_scale}
+        return {**super().hyperparams, "n_in": self._n_in, "n_out": self._n_out, "surrogate_scale": self._surrogate_scale}
 
 
 class VanillaBaseLIFNeurons(BaseLIFNeurons):
 
-    def __init__(self, n_in, n_out, beta_init=0.9, beta_range=[0, 1], beta_diff=False, bias_init=0, bias_diff=True, surrogate_scale=100, detach_reset_grad=True, deactivate_reset=False, inf_refactory=False):
-        super().__init__(n_in, n_out, beta_init, beta_range, beta_diff, bias_init, bias_diff, surrogate_scale)
-        self._detach_reset_grad = detach_reset_grad
+    def __init__(self, n_in, n_out, beta_init=0.9, bias_init=0, surrogate_scale=100, deactivate_reset=False, single_spike=False):
+        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale)
         self._deactivate_reset = deactivate_reset
-        self._inf_refactory = inf_refactory
+        self._single_spike = single_spike
 
     @property
     def hyperparams(self):
-        return {**super().hyperparams, 'detach_reset_grad': self._detach_reset_grad, 'deactivate_reset': self._deactivate_reset, 'inf_refactory': self._inf_refactory}
+        return {**super().hyperparams, 'deactivate_reset': self._deactivate_reset}
 
     def input_to_current(self, pre_spikes):
         raise NotImplementedError
@@ -52,90 +43,171 @@ class VanillaBaseLIFNeurons(BaseLIFNeurons):
         # pre_spikes: n_batch x n_in x n_timesteps x ...
 
         # Initialise membrane voltage and tracking variables
-        with torch.no_grad():
-            t_len = pre_spikes.shape[2]
-            out_shape = self.input_to_current(pre_spikes[:, :, 0]).shape
-            mem = torch.zeros(out_shape, device=pre_spikes.device, dtype=pre_spikes.dtype)
-            d = torch.zeros(out_shape, device=pre_spikes.device, dtype=pre_spikes.dtype)
-            mem_list = []
-            post_spikes_list = []
+        t_len = pre_spikes.shape[2]
+        spike_mask = None
+        mem = None
+        mem_list = []
+        post_spikes_list = []
 
         for t in range(t_len):
             input_current = self.input_to_current(pre_spikes[:, :, t])
 
             # Update membrane potential
-            mem = self.beta * mem + input_current
-            # mem = torch.einsum('bn...,n->bn...', mem, self.beta) + input_current
+            if mem is None:
+                new_mem = input_current
+            else:
+                new_mem = self.beta * mem + input_current
 
             # To spike or not to spike
-            post_spikes = self._spike_function(mem - 1)
+            post_spikes = self._spike_function(new_mem - 1)
 
-            if self._inf_refactory:
-                post_spikes *= (1 - d)
-                d = torch.maximum(d, post_spikes)
+            if spike_mask is None:
+                spike_mask = torch.zeros(post_spikes.shape)
+
+            if self._single_spike:
+                post_spikes *= (1 - spike_mask)
+                spike_mask = torch.maximum(spike_mask, post_spikes)
+
             post_spikes_list.append(post_spikes)
 
+            # Reset membrane potential for spiked neurons
             if not self._deactivate_reset:
-                # Reset membrane potential for spiked neurons
-                reset = post_spikes if not self._detach_reset_grad else post_spikes.detach()
-                # mem *= (1 - reset)
-                mem -= reset
-            mem_list.append(mem.clone())
+                new_mem -= post_spikes
+
+            mem_list.append(new_mem)
+            mem = new_mem
 
         return torch.stack(post_spikes_list, dim=2), torch.stack(mem_list, dim=2)
 
 
+class LinearLIFNeurons(VanillaBaseLIFNeurons):
+
+    def __init__(self, n_in, n_out, beta_init=0.9, bias_init=0, surrogate_scale=100, deactivate_reset=False, single_spike=False):
+        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale, deactivate_reset, single_spike)
+        self.pre_spikes_to_current = nn.Linear(n_in, n_out)
+        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/n_in), b=np.sqrt(1/n_in))
+        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
+
+    def input_to_current(self, pre_spikes):
+        return self.pre_spikes_to_current(pre_spikes)
+
+
+class ConvLIFNeurons(VanillaBaseLIFNeurons):
+
+    def __init__(self, n_in, n_out, kernel_size, stride, beta_init=0.9, bias_init=0, surrogate_scale=100, deactivate_reset=False, single_spike=False):
+        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale, deactivate_reset, single_spike)
+        self.pre_spikes_to_current = nn.Conv2d(n_in, n_out, kernel_size, stride)
+
+        k_in = n_in * kernel_size * kernel_size
+        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/k_in), b=np.sqrt(1/k_in))
+        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
+
+    def input_to_current(self, pre_spikes):
+        return self.pre_spikes_to_current(pre_spikes)
+
+
 class LinearFastLIFNeurons(BaseLIFNeurons):
 
-    def __init__(self, n_in, n_out, t_len, beta_init=0.9, beta_range=[0, 1], beta_diff=False, bias_init=0, bias_diff=True, surrogate_scale=100):
-        super().__init__(n_in, n_out, beta_init, beta_range, beta_diff, bias_init, bias_diff, surrogate_scale)
-        self.t_len = t_len
+    def __init__(self, t_len, n_in, n_out, beta_init=0.9, bias_init=0, surrogate_scale=100):
+        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale)
+        self._t_len = t_len
 
-        self.weight = nn.Parameter(data=torch.rand(n_out, n_in))
-        self.bias = nn.Parameter(data=torch.rand(n_out), requires_grad=bias_diff)
+        self.pre_spikes_to_current = nn.Linear(n_in, n_out)
+        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/n_in), b=np.sqrt(1/n_in))
+        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
+
         self._betas_kernel = nn.Parameter(torch.cat([torch.Tensor([beta_init]) ** (t_len-i-1) for i in range(t_len)], dim=0).T.view(1, 1, 1, t_len))
-        self._sum_kernel = nn.Parameter(torch.ones(t_len).view(1, 1, 1, t_len))
-
-        self.init_weight(self.weight, 'uniform', a=-np.sqrt(1/n_in), b=np.sqrt(1/n_in))
-        self.init_weight(self.bias, 'constant', c=bias_init)
+        self._sum_kernel = nn.Parameter(torch.ones(1, 1, 1, t_len))
 
     @property
     def hyperparams(self):
-        return {**super().hyperparams, 't_len': self.t_len}
-
-    @staticmethod
-    def s(s_sum):
-        return F.relu(s_sum * (1 - s_sum) + 1) * s_sum
+        return {**super().hyperparams, 't_len': self._t_len}
 
     def forward(self, pre_spikes):
         # pre_spikes: n_batch x n_in x n_timesteps
 
-        input_current = torch.einsum('bjt,ij->bti', pre_spikes, self.weight) + self.bias
+        # 1. Convert pre-synaptic spikes to input current
+        pre_spikes = pre_spikes.permute(0, 2, 1)  # b x time x n
+        input_current = self.pre_spikes_to_current(pre_spikes)
 
-        input_current = input_current.permute(0, 2, 1)
-        pad_input_current = F.pad(input_current, pad=(self.t_len-1, 0)).unsqueeze(1)
+        # 2. Calculate membrane potential without reset
+        input_current = input_current.permute(0, 2, 1)  # b x n x time
+        pad_input_current = F.pad(input_current, pad=(self._t_len - 1, 0)).unsqueeze(1)
         int_mem = F.conv2d(pad_input_current, self._betas_kernel)
-        int_spikes = F.pad(self._spike_function(int_mem - 1), pad=(self.t_len - 1, 0))
-        sum_spikes = F.pad(F.conv2d(int_spikes, self._sum_kernel), pad=(self.t_len-1, 0))
-        sum_spikes = F.conv2d(sum_spikes, self._sum_kernel)
 
-        spikes = LinearFastLIFNeurons.s(sum_spikes).squeeze(1)
+        # 3. Map no-reset membrane potentials to output spikes
+        int_spikes = self._spike_function(int_mem - 1)
+        pad_int_spikes = F.pad(int_spikes, pad=(self._t_len - 1, 0))
+        sum_a = F.conv2d(pad_int_spikes, self._sum_kernel)
+        pad_sum_a = F.pad(sum_a, pad=(self._t_len - 1, 0))
+        sum_b = F.conv2d(pad_sum_a, self._sum_kernel)
+        spikes = LinearFastLIFNeurons.g(sum_b).squeeze(1)
 
         return spikes, int_mem.squeeze(1)
 
+    @staticmethod
+    def g(s_sum):
+        return F.relu(s_sum * (1 - s_sum) + 1) * s_sum
 
-class LinearLIFNeurons(VanillaBaseLIFNeurons):
 
-    def __init__(self, n_in, n_out, beta_init=0.9, beta_range=[0, 1], beta_diff=False, bias_init=0, bias_diff=True, surrogate_scale=100, detach_reset_grad=True, deactivate_reset=False, inf_refactory=False):
-        super().__init__(n_in, n_out, beta_init, beta_range, beta_diff, bias_init, bias_diff, surrogate_scale, detach_reset_grad, deactivate_reset, inf_refactory)
-        self.pre_spikes_to_current = nn.Linear(n_in, n_out)
-        self.pre_spikes_to_current.bias.requires_grad = bias_diff
+class ConvFastLIFNeurons(BaseLIFNeurons):
 
-        self.init_weight(self.pre_spikes_to_current.weight, 'uniform', a=-np.sqrt(1/n_in), b=np.sqrt(1/n_in))
-        self.init_weight(self.pre_spikes_to_current.bias, 'constant', c=bias_init)
+    def __init__(self, t_len, n_in, n_out, kernel_size, stride, beta_init=0.9, bias_init=0, surrogate_scale=100):
+        super().__init__(n_in, n_out, beta_init, bias_init, surrogate_scale)
+        self._t_len = t_len
 
-    def input_to_current(self, pre_spikes):
-        return self.pre_spikes_to_current(pre_spikes)
+        self.pre_spikes_to_current = nn.Conv3d(n_in, n_out, (1, kernel_size, kernel_size), stride)
+        k_in = n_in * kernel_size * kernel_size
+        self.init_weight(self.pre_spikes_to_current.weight, "uniform", a=-np.sqrt(1/k_in), b=np.sqrt(1/k_in))
+        self.init_weight(self.pre_spikes_to_current.bias, "constant", c=bias_init)
+
+        self._betas_kernel = nn.Parameter(self._build_beta_kernel())
+        self._sum_kernel = nn.Parameter(self._build_sum_kernel())
+
+    @staticmethod
+    def g(s_sum):
+        return F.relu(s_sum * (1 - s_sum) + 1) * s_sum
+
+    @property
+    def hyperparams(self):
+        return {**super().hyperparams, 't_len': self._t_len}
+
+    def forward(self, pre_spikes):
+        # pre_spikes: n_batch x n_in x n_timesteps
+
+        # 1. Convert pre-synaptic spikes to input current
+        input_current = self.pre_spikes_to_current(pre_spikes)
+
+        # 2. Calculate membrane potential without reset
+        pad_input_current = F.pad(input_current, pad=(0, 0, 0, 0, self._t_len - 1, 0))
+        int_mem = F.conv3d(pad_input_current, self._betas_kernel)
+
+        # 3. Map no-reset membrane potentials to output spikes
+        int_spikes = self._spike_function(int_mem - 1)
+        pad_int_spikes = F.pad(int_spikes, pad=(0, 0, 0, 0, self._t_len - 1, 0))
+        sum_a = F.conv3d(pad_int_spikes, self._sum_kernel)
+        pad_sum_a = F.pad(sum_a, pad=(0, 0, 0, 0, self._t_len - 1, 0))
+        sum_b = F.conv3d(pad_sum_a, self._sum_kernel)
+        spikes = ConvFastLIFNeurons.g(sum_b)
+
+        return spikes, int_mem
+
+    def _build_beta_kernel(self):
+        betas = torch.Tensor([self._beta_init ** (self._t_len-i-1) for i in range(self._t_len)])
+        betas_kernel = torch.zeros(self._n_out, self._n_out, self._t_len, 1, 1)
+
+        for i in range(self._n_out):
+            betas_kernel[i, i, :, 0, 0] = betas
+
+        return betas_kernel
+
+    def _build_sum_kernel(self):
+        sum_kernel = torch.zeros(self._n_out, self._n_out, self._t_len, 1, 1)
+
+        for i in range(self._n_out):
+            sum_kernel[i, i, :] = 1
+
+        return sum_kernel
 
 
 class FastSigmoid(torch.autograd.Function):

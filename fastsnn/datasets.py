@@ -88,10 +88,10 @@ class StaticImageSpiking(BBDataset):
 
 class SyntheticSpikes(BBDataset):
 
-    def __init__(self, n_units, t_len, min_r, max_r, n_samples):
-        super().__init__(None, None)
-        self.n_units = n_units
+    def __init__(self, t_len, n_units, min_r, max_r, n_samples):
+        super().__init__(None)
         self.t_len = t_len
+        self.n_units = n_units
         self.min_r = min_r
         self.max_r = max_r
         self.n_samples = n_samples
@@ -105,9 +105,15 @@ class SyntheticSpikes(BBDataset):
     def __len__(self):
         return self.n_samples
 
+    def _load_dataset(self, train):
+        pass
+
     def _create_spikes(self, rate, n_units, t_len):
         pois_dis = Poisson(rate/t_len)
-        samples = pois_dis.sample(sample_shape=(n_units, t_len))
+        if type(n_units) == tuple:
+            samples = pois_dis.sample(sample_shape=(*n_units, t_len))
+        else:
+            samples = pois_dis.sample(sample_shape=(n_units, t_len))
         samples[samples > 1] = 1
 
         return samples
