@@ -43,7 +43,7 @@ def test_linear_layers():
     fast_spikes, fast_mem = fast_snn(pre_spikes)
     assert (van_spikes.long() ^ fast_spikes.long()).sum() == 0
 
-    
+
 def test_models():
     t_len = 10
 
