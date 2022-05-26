@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python train.py --path=/home/luketaylor/PycharmProjects/FastSNN --layer_type=0 --n_per_hidden=[400] --t_len=200 --batch_size=256 --lr=-4
+python train.py --path=/home/luketaylor/PycharmProjects/FastSNN --n_hidden=300 --n_layers=5 --fast_layer=True --skip_connections=True --dt=2 --dataset=shd --epoch=100 --batch_size=128 --lr=0.001

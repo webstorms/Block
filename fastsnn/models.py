@@ -41,7 +41,6 @@ class BaseModel(BBModel):
                 "readout_beta": self._readout_beta}
 
     def forward(self, spikes):
-
         spike_history = []
         mem_history = []
 

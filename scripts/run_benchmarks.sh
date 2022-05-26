@@ -1,15 +1,12 @@
 #!/bin/bash
-sbatch <<EOT
-#!/bin/sh
-
 # Cluster config
-#SBATCH --job-name=fmnist
+#SBATCH --job-name=layer_benchmarks
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
-#SBATCH --mem=120G
+#SBATCH --mem=32G
 #SBATCH --clusters=htc
 #SBATCH --partition=short
-#SBATCH --time=11:59:00
+#SBATCH --time=4:00:00
 #SBATCH --gres=gpu:1 --constraint='gpu_sku:V100'
 #SBATCH --qos=standard
 #SBATCH --mail-type=ALL
@@ -25,7 +22,4 @@ source activate $DATA/fastsnn
 echo $CUDA_VISIBLE_DEVICES
 nvidia-smi
 
-# Run job
-echo ${@:2}
-python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:1}
-EOT
+python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/run_layer_benchmarks.py

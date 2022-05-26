@@ -1,15 +1,16 @@
 import os
 import sys
-sys.path.append(os.path.join('/home/luketaylor/PycharmProjects', 'BrainBox'))
-sys.path.append(os.path.join('/home/luketaylor/PycharmProjects', 'FastSNN'))
+sys.path.append(os.path.join("/home/luketaylor/PycharmProjects", "BrainBox"))
+sys.path.append(os.path.join("/home/luketaylor/PycharmProjects", "FastSNN"))
+sys.path.append(os.path.join("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects", "BrainBox"))
+sys.path.append(os.path.join("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects", "FastSNN"))
 import ast
 import argparse
 
 import torch
+import numpy as np
 
-from fastsnn.datasets import TimeToFirstSpike, StaticImageSpiking
-from fastsnn.trainer import FastSNNTrainer
-from fastsnn.models import LinearSNN
+from fastsnn import datasets, models, trainer
 
 
 def main():
@@ -17,45 +18,66 @@ def main():
     torch.backends.cudnn.benchmark = True
 
     # Building settings
-    parser = argparse.ArgumentParser(description='Save model outputs.')
+    parser = argparse.ArgumentParser()
 
-    parser.add_argument('--path', type=str, default='.', help='project path (default: .)')
-
-    # model arguments
-    parser.add_argument('--layer_type', type=int, default=0, help='layer type (default: 0)')
-    parser.add_argument('--n_per_hidden', type=str, default='[]', help='number of units per hidden layer (default: [])')
-    parser.add_argument('--t_len', type=int, default=100, help='simulation duration (default: 100)')
-    parser.add_argument('--beta_init', type=float, default=0.9, help='initial beta (default: 0.9)')
-    parser.add_argument('--beta_range', type=str, default='[0.001, 0.999]', help='beta range (default: [0.001, 0.999])')
-    parser.add_argument('--beta_diff', type=str, default='True', help='learnable beta (default: True)')
-    parser.add_argument('--bias_init', type=float, default=0, help='initial bias (default: 0)')
-    parser.add_argument('--bias_diff', type=str, default='True', help='learnable bias (default: True)')
+    # Model arguments
+    parser.add_argument("--path", type=str)
+    parser.add_argument("--n_hidden", type=int)
+    parser.add_argument("--n_layers", type=int)  # TODO: Remove
+    parser.add_argument("--fast_layer", type=str)
+    parser.add_argument("--skip_connections", type=str)  # TODO: Remove
+    parser.add_argument("--bias", type=float, default=0)
+    parser.add_argument("--hidden_tau", type=float, default=10)
+    parser.add_argument("--readout_tau", type=float, default=20)
+    parser.add_argument("--dt", type=float, default=1)
 
     # Training arguments
-    parser.add_argument('--dataset', type=str, default='FashionMNIST', help='dataset name (default: FashionMNIST)')
-    parser.add_argument('--dataset_cash', type=str, default='True', help='dataset cash (default: True)')
-    parser.add_argument('--epoch', type=int, default=50, help='epoch count (default: 50)')
-    parser.add_argument('--batch_size', type=int, default=128, help='batch size (default: 128)')
-    parser.add_argument('--lr', type=float, default=-4, help='lr (default: -4)')
-    parser.add_argument('--device', type=str, default='cuda', help='device (default: cuda)')
-    parser.add_argument('--dtype', type=str, default='float', help='dtype (default: float)')
+    parser.add_argument("--dataset", type=str)
+    parser.add_argument("--epoch", type=int)
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("--lr", type=float, default=0.0002)
+    parser.add_argument("--device", type=str, default="cuda")
 
+    # Load arguments
     args = parser.parse_args()
+    path = args.path
+    n_hidden = args.n_hidden
+    n_layers = args.n_layers
+    fast_layer = ast.literal_eval(args.fast_layer)
+    skip_connections = ast.literal_eval(args.skip_connections)
+    bias = args.bias
+    hidden_tau = args.hidden_tau
+    readout_tau = args.readout_tau
+    dt = args.dt
+    dataset = args.dataset
+    epoch = args.epoch
+    batch_size = args.batch_size
+    lr = args.lr
+    device = args.device
 
     # Instantiate the dataset
-    if args.dataset == 'FashionMNIST':
-        enc = TimeToFirstSpike(args.t_len, thr=0.2)
-        dataset = StaticImageSpiking(os.path.join(args.path, 'data'), args.dataset, train=True, transform=enc, cash=ast.literal_eval(args.dataset_cash))
-        n_in, n_out = 784, 10
+    print("Building dataset...")
+    if args.dataset == "fmnist":
+        dataset = datasets.FMNISTDataset(os.path.join(path, "data"))
+    elif args.dataset == "nmnist":
+        dataset = datasets.NMNISTDataset(os.path.join(path, "data", "N-MNIST"), dt=dt)
+    elif args.dataset == "shd":
+        dataset = datasets.SHDDataset(os.path.join(path, "data", "SHD"), dt=dt)
 
     # Instantiate the model
-    model = LinearSNN(args.layer_type, n_in, n_out, ast.literal_eval(args.n_per_hidden), args.t_len, beta_init=args.beta_init, beta_range=ast.literal_eval(args.beta_range), beta_diff=ast.literal_eval(args.beta_diff), bias_init=args.bias_init, bias_diff=ast.literal_eval(args.bias_diff))
+    print("Building model...")
+    n_in = dataset.n_in
+    n_out = dataset.n_out
+    t_len = dataset.t_len
+    hidden_beta = np.exp(-dt / hidden_tau)
+    readout_beta = np.exp(-dt / readout_tau)
+    model = models.LinearModel(t_len, n_in, n_out, n_hidden, n_layers, fast_layer, skip_connections, bias, hidden_beta, readout_beta)
 
     # Instantiate the trainer
-    dtype = torch.float if args.dtype == 'float' else torch.half
-    trainer = FastSNNTrainer(os.path.join(args.path, 'results'), model, dataset, args.epoch, args.batch_size, args.lr, device=args.device, dtype=dtype)
-    trainer.train(save=True)
+    print("Started training...")
+    snn_trainer = trainer.Trainer(os.path.join(path, "results/datasets/v100/fmnist"), model, dataset, epoch, batch_size, lr, device=device)
+    snn_trainer.train(save=True)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

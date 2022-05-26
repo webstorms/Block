@@ -1,11 +1,11 @@
 name: fastsnn
 dependencies:
   - python=3.8
-  - nb_conda_kernels=2.3.0
-  - numpy
-  - matplotlib
-  - seaborn
-  - pandas
   - pytorch::pytorch
   - pytorch::torchvision
-  - pytest
+  - nvidia::cudatoolkit=11.3
+  - pandas
+  #- pytest
+  - conda-forge::h5py
+  - pip:
+      - tables
