@@ -1,2 +1,0 @@
-fastsnn
-tests
