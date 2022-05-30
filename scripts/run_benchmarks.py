@@ -1,23 +1,20 @@
-import sys
-sys.path.append("/home/luketaylor/PycharmProjects/BrainBox")
-sys.path.append("/home/luketaylor/PycharmProjects/FastSNN")
-sys.path.append("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/BrainBox")
-sys.path.append("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN")
+import os
 
 import torch
+
 from fastsnn.benchmark import LinearLayerBenchmarker
 
 torch.backends.cudnn.benchmark = True
 
 
 def main():
-    path = "/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/results/benchmarks/v100"
+    path = os.path.join(os.path.dirname(os.getcwd()), "results/benchmarks")
     batch_sizes = [16, 32, 64, 128, 256]
     t_lens = [2 ** i for i in range(3, 12)]
     hidden_units = [i * 100 for i in range(1, 11)]
     speedup_layer = [False, True]
 
-    n_samples = 10 + 1
+    n_samples = 10 + 1  # +1 sample is to let cudnn run different conv algorithms which can take long
     input_units = 1000
 
     for batch_size in batch_sizes:

@@ -1,9 +1,4 @@
 import os
-import sys
-sys.path.append(os.path.join("/home/luketaylor/PycharmProjects", "BrainBox"))
-sys.path.append(os.path.join("/home/luketaylor/PycharmProjects", "FastSNN"))
-sys.path.append(os.path.join("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects", "BrainBox"))
-sys.path.append(os.path.join("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects", "FastSNN"))
 import ast
 import argparse
 
@@ -14,18 +9,16 @@ from fastsnn import datasets, models, trainer
 
 
 def main():
-
     torch.backends.cudnn.benchmark = True
 
     # Building settings
     parser = argparse.ArgumentParser()
 
     # Model arguments
-    parser.add_argument("--path", type=str)
     parser.add_argument("--n_hidden", type=int)
-    parser.add_argument("--n_layers", type=int)  # TODO: Remove
+    parser.add_argument("--n_layers", type=int, default=1)
     parser.add_argument("--fast_layer", type=str)
-    parser.add_argument("--skip_connections", type=str)  # TODO: Remove
+    parser.add_argument("--skip_connections", type=str, default="True")
     parser.add_argument("--bias", type=float, default=0)
     parser.add_argument("--hidden_tau", type=float, default=10)
     parser.add_argument("--readout_tau", type=float, default=20)
@@ -40,7 +33,7 @@ def main():
 
     # Load arguments
     args = parser.parse_args()
-    path = args.path
+    path = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     n_hidden = args.n_hidden
     n_layers = args.n_layers
     fast_layer = ast.literal_eval(args.fast_layer)
@@ -75,7 +68,7 @@ def main():
 
     # Instantiate the trainer
     print("Started training...")
-    snn_trainer = trainer.Trainer(os.path.join(path, "results/datasets/v100/fmnist"), model, dataset, epoch, batch_size, lr, device=device)
+    snn_trainer = trainer.Trainer(os.path.join(path, f"results/datasets/{args.dataset}"), model, dataset, epoch, batch_size, lr, device=device)
     snn_trainer.train(save=True)
 
 

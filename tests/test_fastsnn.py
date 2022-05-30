@@ -1,31 +1,8 @@
-import sys
-sys.path.append("/Users/home/PycharmProjects/PhD/BrainBox")
-sys.path.append("/Users/home/PycharmProjects/PhD/FastSNN")
-
 import torch
 import torch.nn as nn
 
 from fastsnn.models import LinearModel
-from fastsnn.layers import LinearLIFNeurons, LinearFastLIFNeurons, ConvLIFNeurons, ConvFastLIFNeurons
-
-
-# def test_snn_params():
-#     beta_init = 0.8
-#     beta_range = [0.001, 0.999]
-#     beta_diff = True
-#     bias_init = 0.2
-#
-#     for i in range(3):
-#         fast_snn = LinearSNN(i, 10, 1, [100], 100, beta_init=beta_init, beta_range=beta_range, beta_diff=beta_diff, bias_init=bias_init)
-#         for layer in fast_snn._layers:
-#             assert abs(layer.beta.item() - beta_init) < 10e-5
-#             assert layer._beta_range == beta_range
-#             assert layer._beta_diff == beta_diff
-#             assert layer._beta_diff == beta_diff
-#             if i == 0:
-#                 assert abs(layer._bias[0].item() - bias_init) < 10e-5
-#             else:
-#                 assert abs(layer.pre_spikes_to_current._bias[0].item() - bias_init) < 10e-5
+from fastsnn.layers import LinearLIFNeurons, LinearFastLIFNeurons
 
 
 def test_linear_layers():

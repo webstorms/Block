@@ -5,7 +5,11 @@ dependencies:
   - pytorch::torchvision
   - nvidia::cudatoolkit=11.3
   - pandas
-  #- pytest
+  - pytest
+  - seaborn
   - conda-forge::h5py
+  - nb_conda_kernels=2.3.1
   - pip:
+      - brainbox
       - tables
+      - --editable .
