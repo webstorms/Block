@@ -52,7 +52,7 @@ python train.py
 
 ## Building results
 
-All speedup and training results can be built by running the notebooks/benchmark_results.ipynb and notebooks/dataset_results.ipynb notebooks. Pretrained models can be downloaded from Google Drive and unzipped into the results directory.
+All speedup and training results can be built by running the notebooks/benchmark_results.ipynb and notebooks/dataset_results.ipynb notebooks.
 
 ### Speedup results
 <img src="figures/speedup_benchmarks.png" width="500">
