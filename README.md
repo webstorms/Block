@@ -12,7 +12,7 @@ conda activate fastsnn
 
 ## Model benchmarking and training
 
-For all experiments make sure to cd into the scripts directory `cd scripts`.
+For all experiments make sure to cd into the scripts directory `cd scripts`. Pretrained models and benchmarks can be found under Releases. 
 
 ### Running benchmark experiments
 
