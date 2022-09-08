@@ -4,13 +4,53 @@ import numpy as np
 import pandas as pd
 
 
-class BenchmarkQuery:
+class BaseBenchmarkQuery:
 
     def __init__(self, root, batches=[32, 64, 128]):
         self._root = root
 
         self._results_df = self._build_df()
         self._results_df = pd.concat([self._query_results(batch=b) for b in batches])
+
+    def _build_df(self):
+        results_df_list = []
+
+        for path in self._get_paths(self._root):
+            results_df_list.append(pd.read_csv(path))
+
+        results_df = pd.concat(results_df_list)
+        results_df["total_time"] = results_df["forward_time"] + results_df["backward_time"]
+
+        return results_df
+
+    def _get_paths(self, root):
+        return [path for path in glob.glob(f"{root}/*")]
+
+    def _query_results(self, **kwargs):
+        query = True
+        for key, value in kwargs.items():
+            query &= self._results_df[key] == value
+
+        if len(kwargs) > 0:
+            return self._results_df[query]
+
+        return self._results_df
+
+
+class Benchmark2dQuery(BaseBenchmarkQuery):
+
+    def __init__(self, root, batches=[32, 64, 128]):
+        super().__init__(root, batches)
+
+    def get_speedups(self, **kwargs):
+        results_df = self._query_results(**kwargs)
+
+        vanilla_times = results_df[results_df["method"] == "standard"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
+        fast_times = results_df[results_df["method"] == "fast_naive"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
+        speedup_df = vanilla_times / fast_times
+        speedup_df.rename(columns={"forward_time": "forward_speedup", "backward_time": "backward_speedup", "total_time": "total_speedup"}, inplace=True)
+
+        return speedup_df
 
     def get_durations(self, units=200, batch_list=[16, 32, 64, 128, 256], log=True):
         layer_results = []
@@ -19,21 +59,11 @@ class BenchmarkQuery:
         results_df = pd.concat(layer_results).reset_index()
 
         results_df["total_time"] = np.log10(results_df["total_time"]) if log else results_df["total_time"]
-        results_df.rename(columns={"type": "Model", "batch": "Batch"}, inplace=True)
-        results_df["Model"].replace("fast", "FastSNN", inplace=True)
-        results_df["Model"].replace("vanilla", "Standard", inplace=True)
+        results_df.rename(columns={"method": "Model", "batch": "Batch"}, inplace=True)
+        results_df["Model"].replace("fast_naive", "FastSNN", inplace=True)
+        results_df["Model"].replace("standard", "Standard", inplace=True)
 
         return results_df
-
-    def get_speedups(self, **kwargs):
-        results_df = self._query_results(**kwargs)
-
-        vanilla_times = results_df[results_df["type"] == "vanilla"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
-        fast_times = results_df[results_df["type"] == "fast"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
-        speedup_df = vanilla_times / fast_times
-        speedup_df.rename(columns={"forward_time": "forward_speedup", "backward_time": "backward_speedup", "total_time": "total_speedup"}, inplace=True)
-
-        return speedup_df
 
     def get_forward_vs_backward_speedup(self, units=200, batch_list=[16, 32, 64, 128, 256]):
         layer_relative_speedup_df = self.get_durations(units, batch_list, log=False).reset_index()
@@ -67,26 +97,24 @@ class BenchmarkQuery:
 
         return pd.DataFrame({"t_len": t_list, "Batch": b_list, "speedup": s_list})
 
-    def _build_df(self):
-        results_df_list = []
 
-        for path in self._get_paths(self._root):
-            results_df_list.append(pd.read_csv(path))
+class BenchmarkUnitsQuery(Benchmark2dQuery):
 
-        results_df = pd.concat(results_df_list)
-        results_df["total_time"] = results_df["forward_time"] + results_df["backward_time"]
+    def __init__(self, root, batches=[32, 64, 128]):
+        super().__init__(root, batches)
 
-        return results_df
 
-    def _get_paths(self, root):
-        return [path for path in glob.glob(f"{root}/*") if "layer" in path]
+class BenchmarkLayersQuery(BaseBenchmarkQuery):
 
-    def _query_results(self, **kwargs):
-        query = True
-        for key, value in kwargs.items():
-            query &= self._results_df[key] == value
+    def __init__(self, root, batches=[32, 64, 128]):
+        super().__init__(root, batches)
 
-        if len(kwargs) > 0:
-            return self._results_df[query]
+    def get_speedups(self, **kwargs):
+        results_df = self._query_results(**kwargs)
 
-        return self._results_df
+        vanilla_times = results_df[results_df["method"] == "standard"].set_index(["t_len", "units",  "layers", "batch"])[["forward_time", "backward_time", "total_time"]]
+        fast_times = results_df[results_df["method"] == "fast_naive"].set_index(["t_len", "units", "layers", "batch"])[["forward_time", "backward_time", "total_time"]]
+        speedup_df = vanilla_times / fast_times
+        speedup_df.rename(columns={"forward_time": "forward_speedup", "backward_time": "backward_speedup", "total_time": "total_speedup"}, inplace=True)
+
+        return speedup_df

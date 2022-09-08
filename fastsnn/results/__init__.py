@@ -1,2 +1,2 @@
-from .datasets import DatasetResultsQuery
-from .benchmark import BenchmarkQuery
+from .datasets import DatasetResultsBuilder
+from .benchmark import Benchmark2dQuery, BenchmarkUnitsQuery, BenchmarkLayersQuery
