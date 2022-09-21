@@ -24,7 +24,7 @@ class BaseNeurons(BBModel):
         self._scale = scale
 
         self._beta = nn.Parameter(data=torch.Tensor(beta_init), requires_grad=beta_requires_grad)
-        self._method_func = self._get_method_func(**kwargs)
+        self._method_func = self._get_method_func(t_len, **kwargs)
 
     @property
     def hyperparams(self):
@@ -40,11 +40,11 @@ class BaseNeurons(BBModel):
         # v_init: b x n
         return self._method_func(x, self.beta, v_init, return_type)
 
-    def _get_method_func(self, **kwargs):
+    def _get_method_func(self, t_len, **kwargs):
         if self._method == METHOD_STANDARD:
-            return methods.MethodStandard(self._t_len, self._spike_func, self._scale, kwargs.get("single_spike", False), kwargs.get("integrator", False))
+            return methods.MethodStandard(t_len, self._spike_func, self._scale, kwargs.get("single_spike", False), kwargs.get("integrator", False))
         elif self._method == METHOD_FAST_NAIVE:
-            return methods.MethodFastNaive(self._t_len, self._spike_func, self._scale, self.beta)
+            return methods.MethodFastNaive(t_len, self._spike_func, self._scale, self.beta)
         elif self._method == METHOD_FAST_OPTIMISED:
             raise NotImplementedError
 
@@ -65,13 +65,7 @@ class LinearNeurons(BaseNeurons):
         return {**super().hyperparams, "n_in": self._n_in, "n_out": self._n_out}
 
     def forward(self, x, v_init=None, return_type=methods.RETURN_SPIKES):
-
         x = x.permute(0, 2, 1)
-
-        if self._method == METHOD_STANDARD:
-            for t in range(self._t_len):
-                self._to_current(x[:, t])
-
         current = self._to_current(x)
         current = current.permute(0, 2, 1)
         spikes = super().forward(current, v_init, return_type)
@@ -103,8 +97,6 @@ class ConvNeurons(BaseNeurons):
         current = self._to_current(x)
         b, n, t, h, w = current.shape
 
-        # print(f"current.shape {current.shape}")
-
         current = current.permute(0, 1, 3, 4, 2)
         current = current.flatten(start_dim=1, end_dim=3)
         spikes = super().forward(current, v_init, return_type)
@@ -114,3 +106,4 @@ class ConvNeurons(BaseNeurons):
             spikes = spikes.permute(0, 1, 4, 2, 3)
 
         return spikes
+

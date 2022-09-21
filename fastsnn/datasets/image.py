@@ -38,7 +38,7 @@ class StaticImageSpiking(BBDataset):
 
 
 class MNISTDataset(StaticImageSpiking):
-
+    
     def __init__(self, root, train=True, t_len=64, transform=None):
         super().__init__(root, train, channel=1, n_out=10, t_len=t_len, transform=transform)
 

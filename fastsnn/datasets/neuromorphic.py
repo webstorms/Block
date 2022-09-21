@@ -69,10 +69,10 @@ class H5Dataset(BBDataset):
 class NMNISTDataset(H5Dataset):
 
     def __init__(self, root, train=True, dt=1, transform=None):
-        super().__init__(root, train, n_in=1156, n_out=10, t_len=400, train_name="train.h5", test_name="test.h5", dt=dt, transform=transform)
+        super().__init__(root, train, n_in=1156, n_out=10, t_len=300, train_name="train.h5", test_name="test.h5", dt=dt, transform=transform)
 
 
 class SHDDataset(H5Dataset):
 
     def __init__(self, root, train=True, dt=2, transform=None):
-        super().__init__(root, train, n_in=700, n_out=20, t_len=300, train_name="shd_train.h5", test_name="shd_test.h5", dt=dt, transform=transform)
+        super().__init__(root, train, n_in=700, n_out=20, t_len=500, train_name="shd_train.h5", test_name="shd_test.h5", dt=dt, transform=transform)

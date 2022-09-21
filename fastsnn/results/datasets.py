@@ -1,9 +1,7 @@
-import os
 import glob
 
 import torch
 import pandas as pd
-import numpy as np
 from brainbox import trainer
 
 import fastsnn.trainer

@@ -57,16 +57,18 @@ def get_model(t_len, args):
     readout_max = ast.literal_eval(args.readout_max)
     print(f"single_spike = {single_spike} {type(single_spike)}")
     print(f"load_conv_model = {load_conv_model} {type(load_conv_model)}")
+    recurrent = ast.literal_eval(args.recurrent)
+    detach_recurrent_spikes = ast.literal_eval(args.detach_recurrent_spikes)
+    print(f"recurrent = {recurrent}")
+    print(f"detach_recurrent_spikes = {detach_recurrent_spikes}")
 
     milestones = [-1]
 
     if args.dataset == "yinyang":
         model = models.YingYangModel(args.method, t_len, single_spike=single_spike)
-
         c = 4
         n_in = 4
         model._model._layers[0].init_weight(model._model._layers[0]._to_current.weight, "uniform", a=-c*np.sqrt(1 / n_in), b=c*np.sqrt(1 / n_in))
-
         milestones = [50, 100]
     elif args.dataset == "mnist":
         if load_conv_model:
@@ -86,8 +88,12 @@ def get_model(t_len, args):
         model = models.NMNISTModel(args.method, t_len, heterogeneous_beta=True, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
         milestones = [30, 60, 90]
     elif args.dataset == "shd":
-        model = models.SHDModel(args.method, t_len, heterogeneous_beta=True, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
-        milestones = [30, 60, 90]
+        if args.d == 0:
+            model = models.SHDModel(args.method, t_len, heterogeneous_beta=True, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
+            milestones = [30, 60, 90]
+        else:
+            model = models.SHDDModel(args.d, recurrent, args.method, t_len, args.n_layers, detach_recurrent_spikes, heterogeneous_beta=True, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
+            milestones = [40, 80, 100]
 
     return model, milestones
 
@@ -104,6 +110,11 @@ def main():
     parser.add_argument("--beta_requires_grad", type=str)
     parser.add_argument("--readout_max", type=str)
     parser.add_argument("--single_spike", type=str)
+    # For d-model
+    parser.add_argument("--d", type=int, default=0)
+    parser.add_argument("--recurrent", type=str, default="True")
+    parser.add_argument("--n_layers", type=int, default=1)
+    parser.add_argument("--detach_recurrent_spikes", type=str, default="True")
 
     # Training arguments
     parser.add_argument("--dataset", type=str)
@@ -130,8 +141,12 @@ def main():
     # Instantiate the trainer
     print("Started training...")
     track_activity = ast.literal_eval(args.track_activity)
-    model_results_path = os.path.join(base_path, f"results/datasets/{args.dataset}" if not track_activity else f"results/datasets/robustness/{args.dataset}")
 
+    if args.d == 0:
+        model_results_path = os.path.join(base_path, f"results/datasets/{args.dataset}" if not track_activity else f"results/datasets/robustness/{args.dataset}")
+    else:
+        model_results_path = os.path.join(base_path, f"results/d_datasets/{args.dataset}")
+    
     # Ensure that activity starts at 0
     if track_activity:
         c = 0.1

@@ -20,6 +20,10 @@ class BaseMethod(BBModel):
         self._spike_func = spike_func
         self._scale = scale
 
+    @property
+    def t_len(self):
+        return self._t_len
+
 
 class MethodStandard(BaseMethod):
 
@@ -102,7 +106,7 @@ class MethodFastNaive(BaseMethod):
 
     def forward(self, current, beta, v_init=None, return_type=RETURN_SPIKES):
         if v_init is not None:
-            current[:, :, 0] += beta.multiply(v_init)
+            current[:, :, 0] += v_init #beta.multiply(v_init)
 
         pad_current = F.pad(current, pad=(self._t_len - 1, 0)).unsqueeze(1)
 

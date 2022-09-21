@@ -74,4 +74,4 @@ def run_layers():
 
 
 if __name__ == "__main__":
-    run_layers()
+    run_2d()

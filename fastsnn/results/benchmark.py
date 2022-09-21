@@ -42,20 +42,25 @@ class Benchmark2dQuery(BaseBenchmarkQuery):
     def __init__(self, root, batches=[32, 64, 128]):
         super().__init__(root, batches)
 
-    def get_speedups(self, **kwargs):
+    def get_speedups(self, apply_mean_time=False, **kwargs):
         results_df = self._query_results(**kwargs)
 
         vanilla_times = results_df[results_df["method"] == "standard"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
         fast_times = results_df[results_df["method"] == "fast_naive"].set_index(["t_len", "units", "batch"])[["forward_time", "backward_time", "total_time"]]
+
+        if apply_mean_time:
+            vanilla_times = vanilla_times.groupby(["t_len", "units", "batch"]).mean()
+            fast_times = fast_times.groupby(["t_len", "units", "batch"]).mean()
+
         speedup_df = vanilla_times / fast_times
         speedup_df.rename(columns={"forward_time": "forward_speedup", "backward_time": "backward_speedup", "total_time": "total_speedup"}, inplace=True)
 
         return speedup_df
 
-    def get_durations(self, units=200, batch_list=[16, 32, 64, 128, 256], log=True):
+    def get_durations(self, units=200, batch_list=[16, 32, 64, 128, 256], log=True, **kwargs):
         layer_results = []
         for batch in batch_list:
-            layer_results.append(self._query_results(batch=batch, units=units))
+            layer_results.append(self._query_results(batch=batch, units=units, **kwargs))
         results_df = pd.concat(layer_results).reset_index()
 
         results_df["total_time"] = np.log10(results_df["total_time"]) if log else results_df["total_time"]
@@ -65,8 +70,8 @@ class Benchmark2dQuery(BaseBenchmarkQuery):
 
         return results_df
 
-    def get_forward_vs_backward_speedup(self, units=200, batch_list=[16, 32, 64, 128, 256]):
-        layer_relative_speedup_df = self.get_durations(units, batch_list, log=False).reset_index()
+    def get_forward_vs_backward_speedup(self, units=200, batch_list=[16, 32, 64, 128, 256], **kwargs):
+        layer_relative_speedup_df = self.get_durations(units, batch_list, log=False, **kwargs).reset_index()
         relative_speedup = layer_relative_speedup_df["backward_time"] / layer_relative_speedup_df["forward_time"]
         layer_relative_speedup_df["relative_speedup"] = relative_speedup
         layer_relative_speedup_df = layer_relative_speedup_df[layer_relative_speedup_df["Model"] == "FastSNN"]

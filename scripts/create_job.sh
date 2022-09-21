@@ -5,10 +5,10 @@ sbatch <<EOT
 #SBATCH --job-name=$1
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=20
-#SBATCH --mem=20Gb
+#SBATCH --mem=120Gb
 #SBATCH --clusters=htc
-#SBATCH --partition=short
-#SBATCH --time=8:00:00
+#SBATCH --partition=medium
+#SBATCH --time=30:00:00
 #SBATCH --gres=gpu:a100:1
 #SBATCH --qos=priority
 #SBATCH --mail-type=ALL
@@ -25,6 +25,8 @@ nvidia-smi
 
 # Run job
 echo ${@:2}
+python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:2}
+python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:2}
 python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:2}
 python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:2}
 python -u /data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN/scripts/train.py ${@:2}
