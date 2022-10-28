@@ -40,9 +40,13 @@ class BaseNeurons(BBModel):
         # v_init: b x n
         return self._method_func(x, self.beta, v_init, return_type)
 
+    def get_recurrent_current(self, spikes):
+        raise NotImplementedError
+    
     def _get_method_func(self, t_len, **kwargs):
         if self._method == METHOD_STANDARD:
-            return methods.MethodStandard(t_len, self._spike_func, self._scale, kwargs.get("single_spike", False), kwargs.get("integrator", False))
+            recurrent_source = self.get_recurrent_current if kwargs.get("recurrent", False) else None
+            return methods.MethodStandard(t_len, self._spike_func, self._scale, kwargs.get("single_spike", False), kwargs.get("integrator", False), recurrent_source)
         elif self._method == METHOD_FAST_NAIVE:
             return methods.MethodFastNaive(t_len, self._spike_func, self._scale, self.beta)
         elif self._method == METHOD_FAST_OPTIMISED:
@@ -57,12 +61,17 @@ class LinearNeurons(BaseNeurons):
         self._n_out = n_out
 
         self._to_current = nn.Linear(n_in, n_out)
+        if kwargs.get("recurrent", False):
+            self._to_recurrent_current = nn.Linear(n_out, n_out)
         self.init_weight(self._to_current.weight, "uniform", a=-np.sqrt(1 / n_in), b=np.sqrt(1 / n_in))
         self.init_weight(self._to_current.bias, "constant", c=0)
 
     @property
     def hyperparams(self):
         return {**super().hyperparams, "n_in": self._n_in, "n_out": self._n_out}
+
+    def get_recurrent_current(self, spikes):
+        return self._to_recurrent_current(spikes)
 
     def forward(self, x, v_init=None, return_type=methods.RETURN_SPIKES):
         x = x.permute(0, 2, 1)

@@ -27,11 +27,13 @@ class BaseMethod(BBModel):
 
 class MethodStandard(BaseMethod):
 
-    def __init__(self, t_len, spike_func, scale, single_spike=False, integrator=False):
+    def __init__(self, t_len, spike_func, scale, single_spike=False, integrator=False, recurrent_source=None):
         print(f"single_spike {single_spike} integrator {integrator}")
+        print(f"recurrent_source {recurrent_source}")
         super().__init__(t_len, spike_func, scale)
         self._single_spike = single_spike
         self._integrator = integrator
+        self._recurrent_source = recurrent_source
 
     @property
     def hyperparams(self):
@@ -51,6 +53,9 @@ class MethodStandard(BaseMethod):
             else:
                 new_mem = torch.einsum("bn...,n->bn...", mem, beta) + current[:, :, t]
 
+                if self._recurrent_source is not None:
+                    new_mem += self._recurrent_source(spikes)
+
             # To spike or not to spike
             spikes = self._spike_func(new_mem - 1, self._scale)
 
@@ -66,7 +71,6 @@ class MethodStandard(BaseMethod):
 
             # Reset membrane potential for spiked neurons
             mem_list.append(new_mem.clone())
-            #if not self._single_spike:
             new_mem -= spikes
             mem = new_mem
 
@@ -94,19 +98,19 @@ class MethodFastNaive(BaseMethod):
 
     @staticmethod
     def g(faulty_spikes):
+        # Note: Alternative ways for passing gradients, however we found these to be inferior during preliminary testing
         # faulty_spikes[faulty_spikes > 1] = 0
+        # faulty_spikes[faulty_spikes != 1.0] = 0
 
         negate_faulty_spikes = faulty_spikes.clone().detach()
         negate_faulty_spikes[faulty_spikes == 1.0] = 0
         faulty_spikes -= negate_faulty_spikes
 
-        # faulty_spikes[faulty_spikes != 1.0] = 0
-
         return faulty_spikes
 
     def forward(self, current, beta, v_init=None, return_type=RETURN_SPIKES):
         if v_init is not None:
-            current[:, :, 0] += v_init #beta.multiply(v_init)
+            current[:, :, 0] += v_init
 
         pad_current = F.pad(current, pad=(self._t_len - 1, 0)).unsqueeze(1)
 

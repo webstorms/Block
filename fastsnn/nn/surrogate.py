@@ -19,6 +19,3 @@ class FastSigmoid(torch.autograd.Function):
         grad = grad_input / (ctx.scale * torch.abs(input) + 1.0) ** 2
         
         return grad, None
-
-
-# TODO: Add Deng SG https://openreview.net/pdf?id=_XNtisL32jv

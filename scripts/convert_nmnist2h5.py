@@ -1,4 +1,4 @@
-import tables
+from pathlib import Path
 from tables import *
 from numpy import *
 import os
@@ -64,14 +64,14 @@ def convert(prms):
 if __name__ == "__main__":
 
     # Convert Train
-    prms = {'data_dir': os.path.join(os.path.dirname(os.getcwd()), "data/N-MNIST/Train"),
-            'output_filename': os.path.join(os.path.dirname(os.getcwd()), "data/N-MNIST/train.h5"),
+    prms = {'data_dir': os.path.join(Path(__file__).parent.parent, "data/N-MNIST/Train"),
+            'output_filename': os.path.join(Path(__file__).parent.parent, "data/N-MNIST/train.h5"),
             'class_list': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
 
     convert(prms)
 
-    prms = {'data_dir': os.path.join(os.path.dirname(os.getcwd()), "data/N-MNIST/Test"),
-            'output_filename': os.path.join(os.path.dirname(os.getcwd()), "data/N-MNIST/test.h5"),
+    prms = {'data_dir': os.path.join(Path(__file__).parent.parent, "data/N-MNIST/Test"),
+            'output_filename': os.path.join(Path(__file__).parent.parent, "data/N-MNIST/test.h5"),
             'class_list': [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]}
 
     convert(prms)

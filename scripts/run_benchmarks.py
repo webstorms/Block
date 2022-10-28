@@ -1,20 +1,14 @@
-import sys
-sys.path.append("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/FastSNN")
-sys.path.append("/data/dpag-auditory-neuroscience/kebl6283/PycharmProjects/BrainBox")
-sys.path.append("/home/luketaylor/PycharmProjects/BrainBox")
-sys.path.append("/home/luketaylor/PycharmProjects/FastSNN")
-
 import os
+from pathlib import Path
 
 import torch
 torch.backends.cudnn.benchmark = True
-# torch.backends.cuda.matmul.allow_tf32 = False
 
 from fastsnn.benchmark import LayerBenchmarker
 
 
 def run_2d():
-    path = os.path.join(os.path.dirname(os.getcwd()), "results/benchmarks/2d")
+    path = os.path.join(Path(__file__).parent.parent, "results/benchmarks/2d")
     batch_sizes = [16, 32, 64, 128]
     t_lens = [2 ** i for i in range(3, 12)]
     hidden_units = [i * 100 for i in range(1, 11)]
@@ -34,7 +28,7 @@ def run_2d():
 
 
 def run_large_n():
-    path = os.path.join(os.path.dirname(os.getcwd()), "results/benchmarks/units")
+    path = os.path.join(Path(__file__).parent.parent, "results/benchmarks/units")
     batch_sizes = [16, 32, 64, 128]
     t_len = 2**7
     hidden_units = [i * 2000 for i in range(1, 11)]
@@ -53,7 +47,7 @@ def run_large_n():
 
 
 def run_layers():
-    path = os.path.join(os.path.dirname(os.getcwd()), "results/benchmarks/layers")
+    path = os.path.join(Path(__file__).parent.parent, "results/benchmarks/layers")
     batch_sizes = [16, 32, 64, 128]
     t_len = 2**7
     hidden_units = [i * 100 for i in range(1, 11)]
@@ -75,3 +69,6 @@ def run_layers():
 
 if __name__ == "__main__":
     run_2d()
+    run_large_n()
+    run_layers()
+

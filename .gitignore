@@ -5,10 +5,17 @@
 __pycache__/
 *.pyc
 *.brainbox.egg-info
-fastsnn.egg-info
+*.egg-info
+
+# Tests
+.pytest_cache
 
 # PyCharm
 .idea
 
 # Jupyter Notebook
 .ipynb_checkpoints
+
+# Slurm scripts
+scripts/launch_layer_benchmarks.sh
+scripts/create_job.sh

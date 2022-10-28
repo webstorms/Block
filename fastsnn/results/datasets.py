@@ -7,9 +7,10 @@ from brainbox import trainer
 import fastsnn.trainer
 
 
-class DatasetResultsBuilder:
+class BaseDatasetResultsBuilder:
 
-    def __init__(self, models_root, dataset, batch_size=256, build_activity=True):
+    def __init__(self, models_root, dataset, batch_size=256, build_activity=True, hyperparams_mapper=None):
+        self._hyperparams_mapper = hyperparams_mapper
         self._results_df = self._build_results_df(models_root, dataset, batch_size, build_activity)
 
     @property
@@ -21,7 +22,7 @@ class DatasetResultsBuilder:
 
         accuracy_df = self._get_accuracy(models_root, model_ids, dataset, batch_size)
         average_duration_per_bath_df = self._get_average_duration_per_batch(models_root, model_ids)
-        hyperparameters_df = trainer.build_models_df(models_root, model_ids, fastsnn.trainer.Trainer.hyperparams_mapper)
+        hyperparameters_df = trainer.build_models_df(models_root, model_ids, self._hyperparams_mapper)
 
         if build_activity:
             spike_counts_df = self._get_average_spikes_per_sample(models_root, model_ids, dataset, batch_size)
@@ -58,6 +59,12 @@ class DatasetResultsBuilder:
     def _get_model_ids(self, models_root):
         model_paths = glob.glob(models_root + "/*")
         return [model_path.split("/")[-1] for model_path in model_paths]
+
+
+class DatasetResultsBuilder(BaseDatasetResultsBuilder):
+
+    def __init__(self, models_root, dataset, batch_size=256, build_activity=True):
+        super().__init__(models_root, dataset, batch_size, build_activity, fastsnn.trainer.Trainer.hyperparams_mapper)
 
 
 class ResultsBuilderMetric:

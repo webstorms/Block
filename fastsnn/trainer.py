@@ -151,10 +151,6 @@ class Trainer(trainer.Trainer):
         beta_requires_grad = bool(model_params["beta_requires_grad"])
         readout_max = bool(model_params["readout_max"])
         single_spike = bool(model_params.get("single_spike", True))
-        d = model_params.get("d")
-        recurrent = model_params.get("recurrent")
-        n_layers = model_params.get("n_layers")
-        detach_recurrent_spikes = bool(model_params.get("detach_recurrent_spikes"))
 
         if name == "YingYangModel":
             return models.YingYangModel(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
@@ -171,9 +167,6 @@ class Trainer(trainer.Trainer):
         elif name == "SHDModel":
             return models.SHDModel(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
 
-        elif name == "SHDDModel":
-            return models.SHDDModel(d, recurrent, method, t_len, n_layers, detach_recurrent_spikes, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
-
     @staticmethod
     def hyperparams_mapper(hyperparams):
         method = hyperparams["model"]["method"]
@@ -183,5 +176,3 @@ class Trainer(trainer.Trainer):
         single_spike = hyperparams["model"]["single_spike"]
 
         return {"method": method, "heterogeneous_beta": heterogeneous_beta, "beta_requires_grad": beta_requires_grad, "readout_max": readout_max, "single_spike": single_spike}
-
-    # Create d_model_mapper

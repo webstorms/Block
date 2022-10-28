@@ -42,8 +42,6 @@ def _linear_models_identical(use_single_beta):
     # Sample input data
     v_init = torch.rand(128, n_out)
     spikes = torch.rand(128, n_in, t_len)
-    # van_linear_output = van_linear(spikes, v_init=v_init)
-    # fast_linear_output = fast_linear(spikes, v_init=v_init)
     van_linear_output = van_linear(spikes)
     fast_linear_output = fast_linear(spikes)
 
