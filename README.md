@@ -1,22 +1,27 @@
-# Accelerating spiking neural network training
+# The single-spike block model
 
-A new method for training single-spike-per-neuron SNNs which is drastically faster than conventional SNNs and obtain competitive results on datasets of low to medium spatio-temporal complexity with a significant reduction in spike counts.
+A new model for robust and accelerated training of single-spike SNNs with competitive performance across various image and neuromorphic datasets. This is the accompanying repository to the paper [Robust and accelerated single-spike spiking neural network training with applicability to challenging temporal tasks](https://arxiv.org/abs/2205.15286).
+
 
 ## Installing dependencies
 
-Install all required dependencies and activate the fastsnn environment using conda.
+Install all required dependencies and activate the block environment using conda.
 ```
 conda env create -f environment.yml
-conda activate fastsnn
+conda activate block
 ```
 
-## Model benchmarking and training
+## Getting started tutorial
 
-For all experiments make sure to cd into the scripts directory `cd scripts`. Pretrained models and benchmarks can be found under Releases. 
+See the `data/Tutorial.ipynb` notebook for getting started with the block model.
+
+## Reproducing paper results
+
+All the paper results can be reproduced using the scripts available in the `scripts` folder. Alternatively, all speedup benchmark results and pretrained models can be founder under the releases.
 
 ### Running benchmark experiments
 
-This script will benchmark the time of the forward and backward passes of the FastSNN and standard SNN model for different numbers of neurons and simulation steps.
+This script will benchmark the time of the forward and backward passes of the Block and standard single-spike SNN model for different numbers of neurons and simulation steps.
 ```
 python run_benchmarks.py
 ```
@@ -35,31 +40,19 @@ Finally, the Spiking Heidelberg Digits (SHD) dataset can be [downloaded](https:/
 
 #### 2. Train model
 
-You can train the standard SNN and FastSNN on the different datasets using the train.py script. The following hyperparameters were used for training on the Fashion-MNIST and Neuromorphic-MNIST datasets. All hyperparameters remained the same for training on the SHD dataset, except for the time update step, epoch count and learning rate `--dt 2 --epoch 200 --lr 0.001`.
+You can train the Block standard single-spike SNN on the different datasets using the train.py script. As an example, see the `scripts/run_robustness.py` script.
 
-```
-python train.py 
---n_hidden 200
---fast_layer True
---hidden_tau 10
---readout_tau 20
---dt 1
---dataset fmnist
---epoch 150
---batch_size 128
---lr 0.0002
-```
 
-## Building results
+## Building result figures
 
-All speedup and training results can be built by running the notebooks/benchmark_results.ipynb and notebooks/dataset_results.ipynb notebooks.
+All speedup and training results can be built by running the `notebooks/results/benchmark_results.ipynb` and `notebooks/results/dataset_results.ipynb` notebooks. The code for the other paper figures can be found under `notebooks/results` directory.
 
 ### Speedup results
-<img src="figures/speedup_benchmarks.png" width="500">
+<img src="figures/figure3.png" width="500">
 
-Speedup of the FastSNN over the standard SNN model for a single layer. **a.** Speedups as a function of the number of layer units and number of simulation steps for the total training step and the individual forward and backward passes (using a batch size b=128). **b.** Training durations for both models. Figures **b**-**f** use a layer with n=200 units and are a 10 sample average for which the mean and s.d. is plotted. **c.** Total training speedup of the FastSNN model. **d.** Forward pass speedup of the FastSN model. **e.** Forward vs the backward pass speedup of the FastSNN model. **f.** Relative speedup of the FastSNN using different batch sizes relative to the standard SNN using a fixed batch size b=128.
+Training speedup of our model over the standard model. **a.** Total training speedup as a function of the number of hidden neurons $n$ and simulation steps $t$ (left), alongside the corresponding forward and backward pass speedups (right). **b.** Training durations of both models for fixed hidden neurons $n=100$ and variable batch size $b$. **c.** Training speedup over different number of layers for fixed time steps $t=2^7$ and batch size $b=128$. **d.** Training speedup over large number of hidden neurons $n$ for fixed time steps $t=2^7$ and variable batch size $b$. **e.** Forward pass speedup for fixed time steps $t=2^7$ and variable batch size $b$. **f.** Forward vs the backward pass speedup of our model for fixed time steps $t=2^7$ and variable batch size $b$. **b-f** use a $10$ sample average with the mean and s.d. plotted.
 
 ### Dataset results
-<img src="figures/classification_accuracy.png" width="500">
+<img src="figures/figure4.png" width="500">
 
-The classification performance and speedup of training the FastSNN on real datasets. **a.** Illustration of the network architecture used for training. **b.** Snapshot of the network activity after training of the FastSNN and standard SNN model in response to a sample from the N-MNIST dataset. Bottom: Spike raster of input sample. Middle: Spike raster of hidden unit activity. Top: Membrane potentials of the readout units (dark green line is the readout unit corresponding to the correct class). **c.** Classification accuracies of the FastSNN and standard SNN for the different datasets. Bar plots **c**-**e** represent a 6 sample mean with s.d.. **d.** Total training speedup of the FastSNN compared to the standard SNN for the different datasets. **e.** Spike count reduction of the FastSNN compared to the standard SNN on the different datasets. **f.** Model performance vs the average processing time of a training batch (b=128). **g.** Model performance vs the average number of spikes elicited per sample.
+Analysis of our models performance on real datasets. **a.** Difference in accuracy between the standard multi-spike and our model. **b.** Training speedup of our model vs the standard single-spike model. **c.** Reduction in spikes of our single-spike model vs the standard multi-spike model (**a-c** use a $3$ sample average with the mean and s.d. plotted). **d.** Training robustness of our model to solve different datasets when starting with zero network activity, which is fatal to other single-spike training methods. Top panel: Normalised training loss over time. Bottom panel: Normalised network activity over time, where the red cross denotes the absence of any spikes.
