@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 torch.backends.cudnn.benchmark = True
 
-from fastsnn.benchmark import LayerBenchmarker
+from block.benchmark import LayerBenchmarker
 
 
 def run_2d():

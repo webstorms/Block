@@ -6,8 +6,8 @@ from pathlib import Path
 import torch
 import numpy as np
 
-from fastsnn import datasets, models, trainer
-from fastsnn.datasets.transforms import List
+from block import datasets, models, trainer
+from block.datasets.transforms import List
 
 
 def get_dataset(base_path, args):

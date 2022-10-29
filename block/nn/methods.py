@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from brainbox.models import BBModel
 
 
-from fastsnn.nn.functional import bconv1d
+from block.nn.functional import bconv1d
 
 
 RETURN_SPIKES = 0

@@ -3,8 +3,8 @@ import torch.nn as nn
 import numpy as np
 from brainbox.models import BBModel
 
-from fastsnn.nn.surrogate import FastSigmoid
-import fastsnn.nn.methods as methods
+from block.nn.surrogate import FastSigmoid
+import block.nn.methods as methods
 
 
 METHOD_STANDARD = "standard"

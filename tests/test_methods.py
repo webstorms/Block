@@ -1,7 +1,7 @@
 import torch
 
-from fastsnn.nn.methods import MethodFastNaive
-from fastsnn.nn.surrogate import FastSigmoid
+from block.nn.methods import MethodFastNaive
+from block.nn.surrogate import FastSigmoid
 
 
 # Test MethodFastNaive

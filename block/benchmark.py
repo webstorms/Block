@@ -4,8 +4,8 @@ import time
 import torch
 import pandas as pd
 
-from fastsnn import datasets
-from fastsnn.models import builder
+from block import datasets
+from block.models import builder
 
 
 class LayerBenchmarker:

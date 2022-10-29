@@ -2,8 +2,8 @@ import torch
 import torch.nn as nn
 from brainbox.models import BBModel
 
-from fastsnn.nn.layers import LinearNeurons, ConvNeurons
-import fastsnn.nn.methods as methods
+from block.nn.layers import LinearNeurons, ConvNeurons
+import block.nn.methods as methods
 
 
 class LinearModel(BBModel):

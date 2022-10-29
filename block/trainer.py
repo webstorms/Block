@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from brainbox import trainer
 
-from fastsnn import models, results
+from block import models, results
 
 
 class Trainer(trainer.Trainer):

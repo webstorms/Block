@@ -1,4 +1,4 @@
-from fastsnn.benchmark import LayerBenchmarker
+from block.benchmark import LayerBenchmarker
 
 
 def test_method():

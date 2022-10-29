@@ -4,7 +4,7 @@ import torch
 import pandas as pd
 from brainbox import trainer
 
-import fastsnn.trainer
+import block.trainer
 
 
 class BaseDatasetResultsBuilder:
@@ -41,7 +41,7 @@ class BaseDatasetResultsBuilder:
         return self._compute_metric_per_sample("spike_counts", models_root, model_ids, dataset, ResultsBuilderMetric.spike_count, batch_size, return_all=True)
 
     def _compute_metric_per_sample(self, metric_name, models_root, model_ids, dataset, metric, batch_size, **kwargs):
-        results_df = trainer.build_metric_df(models_root, model_ids, fastsnn.trainer.Trainer.model_loader, dataset, metric, batch_size, **kwargs)
+        results_df = trainer.build_metric_df(models_root, model_ids, block.trainer.Trainer.model_loader, dataset, metric, batch_size, **kwargs)
         results_df = results_df.groupby("model_id").sum()["metric_score"] / len(dataset)
         results_df = results_df.to_frame().rename(columns={"metric_score": metric_name})
 
@@ -64,7 +64,7 @@ class BaseDatasetResultsBuilder:
 class DatasetResultsBuilder(BaseDatasetResultsBuilder):
 
     def __init__(self, models_root, dataset, batch_size=256, build_activity=True):
-        super().__init__(models_root, dataset, batch_size, build_activity, fastsnn.trainer.Trainer.hyperparams_mapper)
+        super().__init__(models_root, dataset, batch_size, build_activity, block.trainer.Trainer.hyperparams_mapper)
 
 
 class ResultsBuilderMetric:

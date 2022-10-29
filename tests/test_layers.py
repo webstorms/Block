@@ -1,6 +1,6 @@
 import torch
 
-import fastsnn.nn.layers as layers
+import block.nn.layers as layers
 
 
 # Test BaseNeurons
