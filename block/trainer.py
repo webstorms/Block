@@ -1,5 +1,6 @@
 import os
 import time
+import logging
 
 import torch
 import torch.nn.functional as F
@@ -12,7 +13,7 @@ from block import models, results
 
 class Trainer(trainer.Trainer):
 
-    def __init__(self, root, model, dataset, n_epochs, batch_size, lr, milestones, gamma=0.1, val_dataset=None, device="cuda", track_activity=False):
+    def __init__(self, root, model, dataset, n_epochs, batch_size, lr, milestones=[-1], gamma=0.1, val_dataset=None, device="cuda", track_activity=False):
         super().__init__(root, model, dataset, n_epochs, batch_size, lr, torch.optim.Adam, device=device, loader_kwargs={"shuffle": True, "pin_memory": True,  "num_workers": 16})
         self._milestones = milestones
         self._gamma = gamma
@@ -100,11 +101,11 @@ class Trainer(trainer.Trainer):
                 epoch_loss += (loss.item() * data.shape[0])
                 n_samples += data.shape[0]
 
-        print(f"Train acc: {n_correct/n_samples}")
+        logging.info(f"Train acc: {n_correct/n_samples}")
 
         if self._val_dataset is not None and len(self.log["train_loss"]) % 10 == 0:
             scores = trainer.compute_metric(self.model, self._val_dataset, Trainer.accuracy_metric, batch_size=self.batch_size)
-            print(f"Val acc: {np.sum(scores)/len(self._val_dataset)}")
+            logging.info(f"Val acc: {np.sum(scores)/len(self._val_dataset)}")
 
         return epoch_loss / n_samples
 
@@ -114,14 +115,14 @@ class Trainer(trainer.Trainer):
 
             epoch_loss = self.log["train_loss"][-1]
             if epoch_loss < self._min_loss:
-                print(f"Saving model...")
+                logging.info(f"Saving model...")
                 self._min_loss = epoch_loss
                 self.save_model()
 
         n_epoch = len(self.log["train_loss"])
 
         if n_epoch == self._milestones[self._milestone_idx]:
-            print(f"Decaying lr...")
+            logging.info(f"Decaying lr...")
             self.lr *= self._gamma
             # Load best model
             self.model = Trainer.load_model(self.root, self.id, self.device, self.dtype)
@@ -130,7 +131,7 @@ class Trainer(trainer.Trainer):
             )
 
             if self._milestone_idx != len(self._milestones) - 1:
-                print(f"New milestone target...")
+                logging.info(f"New milestone target...")
                 self._milestone_idx += 1
 
     def on_training_complete(self, save):

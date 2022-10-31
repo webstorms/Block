@@ -48,11 +48,11 @@ You can train the Block standard single-spike SNN on the different datasets usin
 All speedup and training results can be built by running the `notebooks/results/benchmark_results.ipynb` and `notebooks/results/dataset_results.ipynb` notebooks. The code for the other paper figures can be found under `notebooks/results` directory.
 
 ### Speedup results
-<img src="figures/figure3.png" width="500">
+<img src="../figures/figure3.png" width="500">
 
 Training speedup of our model over the standard model. **a.** Total training speedup as a function of the number of hidden neurons $n$ and simulation steps $t$ (left), alongside the corresponding forward and backward pass speedups (right). **b.** Training durations of both models for fixed hidden neurons $n=100$ and variable batch size $b$. **c.** Training speedup over different number of layers for fixed time steps $t=2^7$ and batch size $b=128$. **d.** Training speedup over large number of hidden neurons $n$ for fixed time steps $t=2^7$ and variable batch size $b$. **e.** Forward pass speedup for fixed time steps $t=2^7$ and variable batch size $b$. **f.** Forward vs the backward pass speedup of our model for fixed time steps $t=2^7$ and variable batch size $b$. **b-f** use a $10$ sample average with the mean and s.d. plotted.
 
 ### Dataset results
-<img src="figures/figure4.png" width="500">
+<img src="../figures/figure4.png" width="500">
 
 Analysis of our models performance on real datasets. **a.** Difference in accuracy between the standard multi-spike and our model. **b.** Training speedup of our model vs the standard single-spike model. **c.** Reduction in spikes of our single-spike model vs the standard multi-spike model (**a-c** use a $3$ sample average with the mean and s.d. plotted). **d.** Training robustness of our model to solve different datasets when starting with zero network activity, which is fatal to other single-spike training methods. Top panel: Normalised training loss over time. Bottom panel: Normalised network activity over time, where the red cross denotes the absence of any spikes.

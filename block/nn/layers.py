@@ -42,7 +42,7 @@ class BaseNeurons(BBModel):
 
     def get_recurrent_current(self, spikes):
         raise NotImplementedError
-    
+
     def _get_method_func(self, t_len, **kwargs):
         if self._method == METHOD_STANDARD:
             recurrent_source = self.get_recurrent_current if kwargs.get("recurrent", False) else None

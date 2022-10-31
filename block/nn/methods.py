@@ -71,7 +71,8 @@ class MethodStandard(BaseMethod):
 
             # Reset membrane potential for spiked neurons
             mem_list.append(new_mem.clone())
-            new_mem -= spikes
+            if not self._single_spike:
+                new_mem -= spikes
             mem = new_mem
 
         if return_type == RETURN_SPIKES:
