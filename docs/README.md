@@ -13,7 +13,7 @@ conda activate block
 
 ## Getting started tutorial
 
-See the `data/Tutorial.ipynb` notebook for getting started with the block model.
+See the [notebooks/Tutorial.ipynb](../notebooks/Tutorial.ipynb) notebook for getting started with the block model.
 
 ## Reproducing paper results
 
