@@ -64,8 +64,8 @@ class BaseDatasetResultsBuilder:
 
 class DatasetResultsBuilder(BaseDatasetResultsBuilder):
 
-    def __init__(self, models_root, dataset, batch_size=256, build_activity=True, hyperparams_mapper=block.trainer.Trainer.hyperparams_mapper, model_loader=block.trainer.Trainer.model_loader):
-        super().__init__(models_root, dataset, batch_size, build_activity, hyperparams_mapper, model_loader)
+    def __init__(self, models_root, dataset, batch_size=256, build_activity=True):
+        super().__init__(models_root, dataset, batch_size, build_activity, block.trainer.Trainer.hyperparams_mapper, block.trainer.Trainer.model_loader)
 
 
 class ResultsBuilderMetric:
