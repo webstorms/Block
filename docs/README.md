@@ -1,6 +1,6 @@
 # The single-spike block model
 
-A new model for robust and accelerated training of single-spike SNNs with competitive performance across various image and neuromorphic datasets. This is the accompanying repository to the paper [Robust and accelerated single-spike spiking neural network training with applicability to challenging temporal tasks](https://arxiv.org/abs/2205.15286).
+A new model for robust and accelerated training of single-spike spiking neural networks (SNNs) with competitive performance across various image and neuromorphic datasets. This is the accompanying repository to the paper [Robust and accelerated single-spike spiking neural network training with applicability to challenging temporal tasks](https://arxiv.org/abs/2205.15286).
 
 
 ## Installing dependencies
@@ -17,14 +17,11 @@ See the [notebooks/Tutorial.ipynb](../notebooks/Tutorial.ipynb) notebook for get
 
 ## Reproducing paper results
 
-All the paper results can be reproduced using the scripts available in the `scripts` folder. Alternatively, all speedup benchmark results and pretrained models can be founder under the releases.
+All the paper results can be reproduced using the scripts available in the `scripts` folder. Alternatively, all speedup benchmarks and pretrained models can be found under the releases.
 
 ### Running benchmark experiments
 
-This script will benchmark the time of the forward and backward passes of the Block and standard single-spike SNN model for different numbers of neurons and simulation steps.
-```
-python run_benchmarks.py
-```
+The `python run_benchmarks.py` script will benchmark the time of the forward and backward passes of the block and standard single-spike SNN model for different numbers of neurons and simulation steps.
 
 ### Training models
 
@@ -32,20 +29,16 @@ Ensure that the computer has a CUDA capable GPU with CUDA 11.0 installed.
 
 #### 1. Downloading and processing datasets
 
-The Fashion-MNIST dataset will be downloaded by PyTorch by default. The content of the Neuromorphic-MNIST dataset can be [downloaded](https://www.garrickorchard.com/datasets/n-mnist) and unzipped into the `data/N-MNIST` directory. Thereafter, the following script (taken from Perez-Nieves et al., 2021) needs to be run which processes the raw dataset. 
-```
-python convert_nmnist2h5.py
-```
-Finally, the Spiking Heidelberg Digits (SHD) dataset can be [downloaded](https://compneuro.net/posts/2019-spiking-heidelberg-digits/) and unzipped into the `data/SHD` directory.
+The Fashion-MNIST dataset will be downloaded by PyTorch by default. The content of the Neuromorphic-MNIST dataset can be [downloaded](https://www.garrickorchard.com/datasets/n-mnist) and unzipped into the `data/N-MNIST` directory. Thereafter, the `python convert_nmnist2h5.py` script (taken from Perez-Nieves et al., 2021) needs to be run which processes the raw dataset. Finally, the Spiking Heidelberg Digits (SHD) dataset can be [downloaded](https://compneuro.net/posts/2019-spiking-heidelberg-digits/) and unzipped into the `data/SHD` directory.
 
 #### 2. Train model
 
-You can train the Block standard single-spike SNN on the different datasets using the train.py script. As an example, see the `scripts/run_robustness.py` script.
+You can train the block and standard single-spike SNN on the different datasets using the train.py script. As an example, see the `scripts/run_robustness.py` script.
 
 
 ## Building result figures
 
-All speedup and training results can be built by running the `notebooks/results/benchmark_results.ipynb` and `notebooks/results/dataset_results.ipynb` notebooks. The code for the other paper figures can be found under `notebooks/results` directory.
+All speedup and training results can be built by running the `notebooks/results/benchmark_results.ipynb` and `notebooks/results/dataset_results.ipynb` notebooks. The code for the other paper figures can be found under `notebooks/figures` directory.
 
 ### Speedup results
 <img src="../figures/figure3.png" width="500">
