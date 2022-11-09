@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn as nn
 from brainbox.models import BBModel
@@ -104,6 +105,57 @@ class ConvModel(BBModel):
         spikes = spikes.permute(0, 1, 3, 4, 2)
         spikes = spikes.flatten(start_dim=1, end_dim=3)
 
+        spikes = self.linear_layers(spikes)
+        spikes, mem = self.readout_layer(spikes, return_type=methods.RETURN_SPIKES_AND_MEM)
+        output = torch.max(mem, 2)[0] if self._readout_max else torch.sum(mem, 2)
+
+        return output
+
+
+class VGG11Model(BBModel):
+
+    def __init__(self, method, channels, n_in, n_out, t_len, beta_init, heterogeneous_beta, beta_requires_grad, hidden_neurons, readout_max=True, single_spike=True):
+        super().__init__()
+        self._readout_max = readout_max
+
+        sc = 4
+        scale = 1
+        self.conv_layers = nn.Sequential(
+            # Block 1
+            nn.ConstantPad3d((1, 1, 1, 1, 0, 0), 0),
+            ConvNeurons(n_in, 128, 3, 1, method, t_len, LinearModel.build_beta(beta_init, hidden_neurons[0], heterogeneous_beta), beta_requires_grad, scale=scale, single_spike=single_spike, sc=None),
+            nn.MaxPool3d((1, 2, 2), stride=(1, 2, 2)),
+
+            # Block 2
+            nn.ConstantPad3d((1, 1, 1, 1, 0, 0), 0),
+            ConvNeurons(128, 256, 3, 1, method, t_len, LinearModel.build_beta(beta_init, hidden_neurons[0], heterogeneous_beta), beta_requires_grad, scale=scale, single_spike=single_spike, sc=sc),
+            nn.ConstantPad3d((1, 1, 1, 1, 0, 0), 0),
+            ConvNeurons(256, 256, 3, 1, method, t_len, LinearModel.build_beta(beta_init, hidden_neurons[0], heterogeneous_beta), beta_requires_grad, scale=scale, single_spike=single_spike, sc=sc),
+            nn.MaxPool3d((1, 2, 2), stride=(1, 2, 2)),
+
+            # Block 3
+            nn.ConstantPad3d((1, 1, 1, 1, 0, 0), 0),
+            ConvNeurons(256, 512, 3, 1, method, t_len, LinearModel.build_beta(beta_init, hidden_neurons[0], heterogeneous_beta), beta_requires_grad, scale=scale, single_spike=single_spike, sc=sc),
+            nn.ConstantPad3d((1, 1, 1, 1, 0, 0), 0),
+            ConvNeurons(512, 512, 3, 1, method, t_len, LinearModel.build_beta(beta_init, hidden_neurons[0], heterogeneous_beta), beta_requires_grad, scale=scale, single_spike=single_spike, sc=sc),
+            nn.MaxPool3d((1, 2, 2), stride=(1, 2, 2)),
+
+        )
+        n_lin = 4096 // 2
+        self.linear_layers = nn.Sequential(
+            LinearNeurons(hidden_neurons[-1], n_lin, method, t_len, LinearModel.build_beta(beta_init, n_lin, heterogeneous_beta=False), beta_requires_grad=False, single_spike=single_spike),
+            LinearNeurons(n_lin, 1000, method, t_len, LinearModel.build_beta(beta_init, n_lin, heterogeneous_beta=False), beta_requires_grad=False, single_spike=single_spike),
+        )
+        self.readout_layer = LinearNeurons(1000, n_out, method, t_len, LinearModel.build_beta(beta_init, n_out, heterogeneous_beta=False), beta_requires_grad=False, single_spike=True, integrator=True)
+
+        self.linear_layers[0].init_weight(self.linear_layers[0]._to_current.weight, "uniform", a=-np.sqrt(sc / hidden_neurons[-1]), b=np.sqrt(sc / hidden_neurons[-1]))
+        self.linear_layers[1].init_weight(self.linear_layers[1]._to_current.weight, "uniform", a=-np.sqrt(sc / n_lin), b=np.sqrt(sc / n_lin))
+        self.readout_layer.init_weight(self.readout_layer._to_current.weight, "uniform", a=-np.sqrt(sc / 1000), b=np.sqrt(sc / 1000))
+
+    def forward(self, spikes):
+        spikes = self.conv_layers(spikes)
+        spikes = spikes.permute(0, 1, 3, 4, 2)
+        spikes = spikes.flatten(start_dim=1, end_dim=3)
         spikes = self.linear_layers(spikes)
         spikes, mem = self.readout_layer(spikes, return_type=methods.RETURN_SPIKES_AND_MEM)
         output = torch.max(mem, 2)[0] if self._readout_max else torch.sum(mem, 2)

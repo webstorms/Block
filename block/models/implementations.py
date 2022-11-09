@@ -1,7 +1,7 @@
 import numpy as np
 from brainbox.models import BBModel
 
-from block.models.builder import LinearModel, ConvModel
+from block.models.builder import LinearModel, ConvModel, VGG11Model
 
 
 class BaseModel(BBModel):
@@ -99,3 +99,16 @@ class SHDModel(BaseModel):
 
     def forward(self, spikes, return_all=False):
         return self._model(spikes, return_all)
+
+
+class CIFAR10Model(BaseModel):
+
+    _CHANNELS = [64, 128, 256, 256, 512, 512, 512, 512]
+    _NEURONS = [0, 8192]
+
+    def __init__(self, method, t_len, heterogeneous_beta=True, beta_requires_grad=True, readout_max=True, single_spike=True):
+        super().__init__(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
+        self._model = VGG11Model(method, CIFAR10Model._CHANNELS, n_in=3, n_out=10, t_len=t_len, beta_init=1, heterogeneous_beta=heterogeneous_beta, beta_requires_grad=beta_requires_grad, hidden_neurons=CIFAR10Model._NEURONS, readout_max=readout_max, single_spike=single_spike)
+
+    def forward(self, spikes):
+        return self._model(spikes)

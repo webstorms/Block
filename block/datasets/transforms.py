@@ -217,6 +217,62 @@ class RandomHorizontalFlip(BBTransform):
         return {**super().hyperparams, "p": self._p}
 
 
+class ToClip(BBTransform):
+
+    def __init__(self, repeats):
+        self._repeats = repeats
+
+    def __call__(self, img):
+        # img: channel x height x width
+        # output: channel x time x height x width
+        assert len(img.shape) == 3
+        channel = img.shape[0]
+        height = img.shape[1]
+        width = img.shape[2]
+
+        clip = torch.zeros(
+            (
+                channel,
+                self._repeats,
+                height,
+                width,
+            )
+        )
+        clip[:] = img.unsqueeze(1)
+
+        return clip
+
+    @property
+    def hyperparams(self):
+        hyperparams = {
+            **super().hyperparams,
+            "repeats": self._repeats,
+        }
+
+        return hyperparams
+
+
+class Normalize(BBTransform):
+
+    def __init__(self, mean, std):
+        self._mean = mean
+        self._std = std
+        self._transform = torchvision.transforms.Normalize(self._mean, self._std)
+
+    def __call__(self, img):
+        return self._transform(img)
+
+    @property
+    def hyperparams(self):
+        hyperparams = {
+            **super().hyperparams,
+            "mean": self._mean,
+            "std": self._std,
+        }
+
+        return hyperparams
+
+
 class Flatten(BBTransform):
 
     # Randomly crop spatial dims from tensor
@@ -299,5 +355,26 @@ class List:
             raise NotImplementedError
         else:
             transform_list = [SpikeTensorBuilder(n_units=700, t_len=t_len, dt=2)]
+
+        return brainbox.datasets.transforms.Compose(transform_list)
+
+    @staticmethod
+    def get_cifar10_transform(t_len, use_augmentation=False):
+        if use_augmentation:
+            # transform_list = brainbox.datasets.transforms.Compose(
+            #     [
+            #         RandomCrop(32, 4),
+            #         RandomHorizontalFlip(),
+            #         SingleSpike2DEncoding(channel=3, dim=32, t_len=t_len, max_c=1)
+            #     ]
+            # )
+            transform_list = [
+                Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+                RandomHorizontalFlip(),
+                RandomCrop(32, 4),
+                ToClip(t_len)
+            ]
+        else:
+            raise NotImplementedError
 
         return brainbox.datasets.transforms.Compose(transform_list)

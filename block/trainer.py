@@ -25,7 +25,7 @@ class Trainer(trainer.Trainer):
             self._activity = []
         self._min_loss = np.inf
         self._milestone_idx = 0
-
+    
     @staticmethod
     def accuracy_metric(output, target):
         _, predictions = torch.max(output, 1)
@@ -167,6 +167,8 @@ class Trainer(trainer.Trainer):
             return models.NMNISTModel(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
         elif name == "SHDModel":
             return models.SHDModel(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
+        elif name == "CIFAR10Model":
+            return models.CIFAR10Model(method, t_len, heterogeneous_beta, beta_requires_grad, readout_max, single_spike)
 
     @staticmethod
     def hyperparams_mapper(hyperparams):

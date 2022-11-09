@@ -61,7 +61,7 @@ class LinearNeurons(BaseNeurons):
         self._n_out = n_out
 
         self._to_current = nn.Linear(n_in, n_out)
-        self._to_recurrent_current = nn.Linear(n_out, n_out)
+        #self._to_recurrent_current = nn.Linear(n_out, n_out)
         self.init_weight(self._to_current.weight, "uniform", a=-np.sqrt(1 / n_in), b=np.sqrt(1 / n_in))
         self.init_weight(self._to_current.bias, "constant", c=0)
 
@@ -69,8 +69,8 @@ class LinearNeurons(BaseNeurons):
     def hyperparams(self):
         return {**super().hyperparams, "n_in": self._n_in, "n_out": self._n_out}
 
-    def get_recurrent_current(self, spikes):
-        return self._to_recurrent_current(spikes)
+    # def get_recurrent_current(self, spikes):
+    #     return self._to_recurrent_current(spikes)
 
     def forward(self, x, v_init=None, return_type=methods.RETURN_SPIKES):
         x = x.permute(0, 2, 1)
@@ -93,8 +93,12 @@ class ConvNeurons(BaseNeurons):
 
         self._to_current = nn.Conv3d(n_in, n_out, (1, kernel, kernel), (1, stride, stride))
 
-        n_in = kernel * kernel
-        self.init_weight(self._to_current.weight, "uniform", a=-np.sqrt(1 / n_in), b=np.sqrt(1 / n_in))
+        sc = kwargs.get("sc", 1)
+        if sc is not None:
+            n_in = kernel * kernel * n_in
+            self.init_weight(self._to_current.weight, "uniform", a=-sc*np.sqrt(1 / n_in), b=sc*np.sqrt(1 / n_in))
+        else:
+            self.init_weight(self._to_current.weight, "glorot_normal")
         self.init_weight(self._to_current.bias, "constant", c=0)
 
     @property

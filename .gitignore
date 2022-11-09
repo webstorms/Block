@@ -17,5 +17,5 @@ __pycache__/
 .ipynb_checkpoints
 
 # Slurm scripts
-scripts/launch_layer_benchmarks.sh
-scripts/create_job.sh
+scripts/cluster
+scripts/run_cifar10.py

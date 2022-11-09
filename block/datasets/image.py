@@ -57,3 +57,14 @@ class FMNISTDataset(StaticImageSpiking):
         dataset = torchvision.datasets.FashionMNIST(self._root, train=train, transform=torchvision.transforms.ToTensor(), download=True)
 
         return StaticImageSpiking.build_dataset(dataset), dataset.targets
+
+
+class CIFAR10Dataset(StaticImageSpiking):
+
+    def __init__(self, root, train=True, t_len=64, transform=None):
+        super().__init__(root, train, channel=1, n_out=10, t_len=t_len, transform=transform)
+
+    def _load_dataset(self, train):
+        dataset = torchvision.datasets.CIFAR10(self._root, train=train, transform=torchvision.transforms.ToTensor(), download=True)
+
+        return StaticImageSpiking.build_dataset(dataset), dataset.targets

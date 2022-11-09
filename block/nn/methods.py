@@ -54,7 +54,7 @@ class MethodStandard(BaseMethod):
                 new_mem = torch.einsum("bn...,n->bn...", mem, beta) + current[:, :, t]
 
                 if self._recurrent_source is not None:
-                    new_mem += self._recurrent_source(spikes)
+                    new_mem += self._recurrent_source(spikes.detach())
 
             # To spike or not to spike
             spikes = self._spike_func(new_mem - 1, self._scale)

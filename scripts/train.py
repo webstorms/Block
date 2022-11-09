@@ -6,8 +6,8 @@ from pathlib import Path
 import torch
 import numpy as np
 
-from block import datasets, models, trainer
-from block.datasets.transforms import List
+from dblock import datasets, models, trainer
+from dblock.datasets.transforms import List
 
 
 def get_dataset(base_path, args):
@@ -38,6 +38,10 @@ def get_dataset(base_path, args):
     elif args.dataset == "ssc":
         transform = List.get_ssc_transform(args.t_len)
         dataset = datasets.SSCDataset(os.path.join(base_path, "data", "SSC"), dt=2, transform=transform)
+
+    elif args.dataset == "cifar10":
+        transform = List.get_cifar10_transform(args.t_len, use_augmentation=use_augmentation)
+        dataset = datasets.CIFAR10Dataset(os.path.join(base_path, "data"), t_len=args.t_len, transform=transform)
 
     return dataset
 
@@ -78,6 +82,9 @@ def get_model(t_len, args):
     elif args.dataset == "shd":
         model = models.SHDModel(args.method, t_len, heterogeneous_beta=True, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
         milestones = [30, 60, 90]
+    elif args.dataset == "cifar10":
+        model = models.CIFAR10Model(args.method, t_len, heterogeneous_beta=False, beta_requires_grad=beta_requires_grad, readout_max=readout_max, single_spike=single_spike)
+        milestones = [50, 100, 120]
 
     return model, milestones
 
@@ -97,6 +104,7 @@ def main():
     parser.add_argument("--single_spike", type=str)
 
     # Training arguments
+    parser.add_argument("--gamma", type=float, default=0.1)
     parser.add_argument("--dataset", type=str)
     parser.add_argument("--load_spatial_dims", type=str)
     parser.add_argument("--use_augmentation", type=str)
@@ -108,8 +116,8 @@ def main():
 
     # Load arguments
     args = parser.parse_args()
-    base_path = Path(__file__).parent.parent
-
+    base_path = Path(os.path.dirname(os.path.abspath(__file__))).parent
+    print(base_path)
     # Instantiate the dataset
     print("Building dataset...")
     dataset = get_dataset(base_path, args)
@@ -130,7 +138,9 @@ def main():
         n_in = 28*28 if args.dataset == "mnist" else dataset.n_in
         model._model._layers[0].init_weight(model._model._layers[0]._to_current.weight, "uniform", a=-c*np.sqrt(1 / n_in), b=c*np.sqrt(1 / n_in))
 
-    snn_trainer = trainer.Trainer(model_results_path, model, dataset, args.epoch, args.batch, args.lr, milestones=milestones, device=args.device, track_activity=track_activity)
+    transform = List.get_cifar10_transform(args.t_len, use_augmentation=True)
+    val_dataset = datasets.CIFAR10Dataset(os.path.join(base_path, "data"), train=False, t_len=args.t_len, transform=transform)
+    snn_trainer = trainer.Trainer(model_results_path, model, dataset, args.epoch, args.batch, args.lr, milestones=milestones, gamma=args.gamma, val_dataset=val_dataset, device=args.device, track_activity=track_activity)
     snn_trainer.train(save=True)
 
 
